@@ -12,6 +12,7 @@
     "test-engine": "npx tsx scripts/test-engine.ts"
   },
   "dependencies": {
+    "@heyputer/puter.js": "^2.6.2",
     "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.109.0",
     "clsx": "^2.1.1",
