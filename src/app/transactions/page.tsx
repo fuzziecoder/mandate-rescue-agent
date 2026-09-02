@@ -224,7 +224,7 @@ export default function TransactionsList() {
                     setSearchTerm(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="pl-9 pr-4 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 w-48 sm:w-64 font-mono"
+                  className="pl-9 pr-4 py-1.5 bg-zinc-950/90 border border-zinc-800 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 rounded-lg w-48 sm:w-64 font-mono transition-colors"
                 />
               </div>
 
@@ -235,13 +235,13 @@ export default function TransactionsList() {
                   setStatusFilter(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-300 font-mono focus:outline-none focus:border-cyan-500"
+                className="bg-zinc-950/90 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 cursor-pointer transition-colors"
               >
-                <option value="all">All Outcomes</option>
-                <option value="recovered">Recovered</option>
-                <option value="pending">Pending</option>
-                <option value="failed">Failed</option>
-                <option value="stopped">Stopped</option>
+                <option value="all" className="bg-zinc-950 text-slate-200">All Outcomes</option>
+                <option value="recovered" className="bg-zinc-950 text-slate-200">Recovered</option>
+                <option value="pending" className="bg-zinc-950 text-slate-200">Pending</option>
+                <option value="failed" className="bg-zinc-950 text-slate-200">Failed</option>
+                <option value="stopped" className="bg-zinc-950 text-slate-200">Stopped</option>
               </select>
 
               {/* Cause Filter */}
@@ -251,13 +251,13 @@ export default function TransactionsList() {
                   setCauseFilter(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-300 font-mono focus:outline-none focus:border-cyan-500"
+                className="bg-zinc-950/90 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 cursor-pointer transition-colors"
               >
-                <option value="all">All Causes</option>
-                <option value="insufficient_balance">Low Balance</option>
-                <option value="bank_downtime">Bank Offline</option>
-                <option value="mandate_expired">Mandate Expired</option>
-                <option value="limit_exceeded">Limit Exceeded</option>
+                <option value="all" className="bg-zinc-950 text-slate-200">All Causes</option>
+                <option value="insufficient_balance" className="bg-zinc-950 text-slate-200">Low Balance</option>
+                <option value="bank_downtime" className="bg-zinc-950 text-slate-200">Bank Offline</option>
+                <option value="mandate_expired" className="bg-zinc-950 text-slate-200">Mandate Expired</option>
+                <option value="limit_exceeded" className="bg-zinc-950 text-slate-200">Limit Exceeded</option>
               </select>
             </div>
           </div>

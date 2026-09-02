@@ -1,0 +1,36 @@
+{
+  "entity": "event",
+  "account_id": "acc_synthetic_demo",
+  "event": "subscription.charged",
+  "event_id": "evt_fix_sub_charged_003",
+  "created_at": 1772563400,
+  "original_failure_transaction_id": "rzp_pay_synthetic_failed_101",
+  "payload": {
+    "payment": {
+      "entity": {
+        "id": "pay_synthetic_success_303",
+        "entity": "payment",
+        "amount": 149900,
+        "currency": "INR",
+        "status": "captured",
+        "order_id": "order_synth_101",
+        "invoice_id": "inv_synth_101",
+        "international": false,
+        "method": "upi",
+        "captured": true,
+        "description": "Cloud Hosting Subscription",
+        "bank": "HDFC",
+        "vpa": "customer@okhdfcbank",
+        "email": "synthetic_customer_101@example.com",
+        "contact": "+919900000101",
+        "customer_id": "cust_demo_7781",
+        "token_id": "token_mand_99812",
+        "subscription_id": "sub_synthetic_pend_202",
+        "notes": {
+          "original_transaction_id": "rzp_pay_synthetic_failed_101"
+        },
+        "created_at": 1772563400
+      }
+    }
+  }
+}

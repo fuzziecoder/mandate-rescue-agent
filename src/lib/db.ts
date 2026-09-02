@@ -107,16 +107,24 @@ if (dbUrl) {
   supabaseClient = createClient(supabaseUrl, supabaseKey);
 }
 
-// JSON Fallback DB Path
-const JSON_DB_DIR = path.join(process.cwd(), 'data');
-const JSON_DB_PATH = path.join(JSON_DB_DIR, 'db.json');
+// JSON Fallback DB Path helper
+function getJsonDbPath(): string {
+  if (process.env.MANDATE_RESCUE_DB_PATH) {
+    return path.isAbsolute(process.env.MANDATE_RESCUE_DB_PATH)
+      ? process.env.MANDATE_RESCUE_DB_PATH
+      : path.join(process.cwd(), process.env.MANDATE_RESCUE_DB_PATH);
+  }
+  return path.join(process.cwd(), 'data', 'db.json');
+}
 
 // Helper to ensure JSON DB structure exists
 function initJsonDb() {
-  if (!fs.existsSync(JSON_DB_DIR)) {
-    fs.mkdirSync(JSON_DB_DIR, { recursive: true });
+  const targetPath = getJsonDbPath();
+  const targetDir = path.dirname(targetPath);
+  if (!fs.existsSync(targetDir)) {
+    fs.mkdirSync(targetDir, { recursive: true });
   }
-  if (!fs.existsSync(JSON_DB_PATH)) {
+  if (!fs.existsSync(targetPath)) {
     const initialData = {
       transactions: [],
       classifications: [],
@@ -126,13 +134,14 @@ function initJsonDb() {
       audit_log: [],
       promises: [],
       ledger: [],
+      webhook_receipts: [],
       settings: { pause_outgoing_contacts: false }
     };
-    fs.writeFileSync(JSON_DB_PATH, JSON.stringify(initialData, null, 2), 'utf8');
+    fs.writeFileSync(targetPath, JSON.stringify(initialData, null, 2), 'utf8');
   } else {
     // Read and merge any missing fields
     try {
-      const current = JSON.parse(fs.readFileSync(JSON_DB_PATH, 'utf8'));
+      const current = JSON.parse(fs.readFileSync(targetPath, 'utf8'));
       let modified = false;
       if (!current.promises) {
         current.promises = [];
@@ -142,12 +151,16 @@ function initJsonDb() {
         current.ledger = [];
         modified = true;
       }
+      if (!current.webhook_receipts) {
+        current.webhook_receipts = [];
+        modified = true;
+      }
       if (!current.settings) {
         current.settings = { pause_outgoing_contacts: false };
         modified = true;
       }
       if (modified) {
-        fs.writeFileSync(JSON_DB_PATH, JSON.stringify(current, null, 2), 'utf8');
+        fs.writeFileSync(targetPath, JSON.stringify(current, null, 2), 'utf8');
       }
     } catch(e) {}
   }
@@ -156,8 +169,9 @@ function initJsonDb() {
 // Helper to read JSON DB
 function readJsonDb(): any {
   initJsonDb();
+  const targetPath = getJsonDbPath();
   try {
-    const data = fs.readFileSync(JSON_DB_PATH, 'utf8');
+    const data = fs.readFileSync(targetPath, 'utf8');
     return JSON.parse(data);
   } catch (error) {
     console.error("Failed to read local JSON DB, resetting...", error);
@@ -168,15 +182,55 @@ function readJsonDb(): any {
       guardrail_checks: [],
       executions: [],
       audit_log: [],
+      promises: [],
+      ledger: [],
+      webhook_receipts: [],
+      settings: { pause_outgoing_contacts: false }
     };
     return initialData;
   }
 }
 
-// Helper to write JSON DB
+// Helper to write JSON DB with atomic file operation
 function writeJsonDb(data: any) {
   initJsonDb();
-  fs.writeFileSync(JSON_DB_PATH, JSON.stringify(data, null, 2), 'utf8');
+  const targetPath = getJsonDbPath();
+  const tempPath = `${targetPath}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`;
+  fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), 'utf8');
+  try {
+    fs.renameSync(tempPath, targetPath);
+  } catch (e) {
+    fs.writeFileSync(targetPath, JSON.stringify(data, null, 2), 'utf8');
+    try { fs.unlinkSync(tempPath); } catch (_) {}
+  }
+}
+
+export async function getWebhookReceipt(providerEventId: string): Promise<any | null> {
+  const db = readJsonDb();
+  const receipts = db.webhook_receipts || [];
+  return receipts.find((r: any) => r.provider_event_id === providerEventId) || null;
+}
+
+export async function saveWebhookReceipt(receipt: any): Promise<void> {
+  const db = readJsonDb();
+  if (!db.webhook_receipts) db.webhook_receipts = [];
+  const idx = db.webhook_receipts.findIndex((r: any) => r.provider_event_id === receipt.provider_event_id);
+  if (idx >= 0) {
+    db.webhook_receipts[idx] = receipt;
+  } else {
+    db.webhook_receipts.push(receipt);
+  }
+  writeJsonDb(db);
+}
+
+export async function updateWebhookReceipt(providerEventId: string, patch: Record<string, any>): Promise<void> {
+  const db = readJsonDb();
+  if (!db.webhook_receipts) db.webhook_receipts = [];
+  const idx = db.webhook_receipts.findIndex((r: any) => r.provider_event_id === providerEventId);
+  if (idx >= 0) {
+    db.webhook_receipts[idx] = { ...db.webhook_receipts[idx], ...patch };
+    writeJsonDb(db);
+  }
 }
 
 // Unified Database Adapter Functions

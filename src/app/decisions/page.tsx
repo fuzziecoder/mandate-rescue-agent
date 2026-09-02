@@ -68,25 +68,25 @@ export default function DecisionsPage() {
           <select
             value={actionFilter}
             onChange={(e) => setActionFilter(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-cyan-500"
+            className="bg-zinc-950/90 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 cursor-pointer transition-colors"
           >
-            <option value="all">All Actions</option>
-            <option value="retry">Auto Retry</option>
-            <option value="nudge">SMS Nudge</option>
-            <option value="reauth">Web Reauth</option>
-            <option value="stop">Stop</option>
+            <option value="all" className="bg-zinc-950 text-slate-200">All Actions</option>
+            <option value="retry" className="bg-zinc-950 text-slate-200">Auto Retry</option>
+            <option value="nudge" className="bg-zinc-950 text-slate-200">SMS Nudge</option>
+            <option value="reauth" className="bg-zinc-950 text-slate-200">Web Reauth</option>
+            <option value="stop" className="bg-zinc-950 text-slate-200">Stop</option>
           </select>
 
           <select
             value={causeFilter}
             onChange={(e) => setCauseFilter(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-cyan-500"
+            className="bg-zinc-950/90 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 cursor-pointer transition-colors"
           >
-            <option value="all">All Causes</option>
-            <option value="insufficient_balance">Insufficient Balance</option>
-            <option value="bank_downtime">Bank Downtime</option>
-            <option value="mandate_expired">Mandate Expired</option>
-            <option value="limit_exceeded">Limit Exceeded</option>
+            <option value="all" className="bg-zinc-950 text-slate-200">All Causes</option>
+            <option value="insufficient_balance" className="bg-zinc-950 text-slate-200">Insufficient Balance</option>
+            <option value="bank_downtime" className="bg-zinc-950 text-slate-200">Bank Downtime</option>
+            <option value="mandate_expired" className="bg-zinc-950 text-slate-200">Mandate Expired</option>
+            <option value="limit_exceeded" className="bg-zinc-950 text-slate-200">Limit Exceeded</option>
           </select>
         </div>
       </div>

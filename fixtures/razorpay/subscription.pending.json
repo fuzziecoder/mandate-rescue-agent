@@ -1,0 +1,31 @@
+{
+  "entity": "event",
+  "account_id": "acc_synthetic_demo",
+  "event": "subscription.pending",
+  "event_id": "evt_fix_sub_pending_002",
+  "created_at": 1772563300,
+  "payload": {
+    "subscription": {
+      "entity": {
+        "id": "sub_synthetic_pend_202",
+        "entity": "subscription",
+        "plan_id": "plan_pro_annual",
+        "customer_id": "cust_demo_7782",
+        "status": "pending",
+        "amount": 249900,
+        "currency": "INR",
+        "token_id": "token_mand_99813",
+        "current_start": 1772563300,
+        "current_end": 1804100000,
+        "ended_at": null,
+        "quantity": 1,
+        "notes": {
+          "subscription_type": "Pro Annual Plan"
+        },
+        "error_code": "BANK_TIMEOUT",
+        "error_description": "Destination bank system is currently unresponsive during subscription debit attempt.",
+        "created_at": 1772563300
+      }
+    }
+  }
+}

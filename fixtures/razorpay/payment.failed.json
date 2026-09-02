@@ -1,0 +1,43 @@
+{
+  "entity": "event",
+  "account_id": "acc_synthetic_demo",
+  "event": "payment.failed",
+  "event_id": "evt_fix_pay_failed_001",
+  "created_at": 1772563200,
+  "payload": {
+    "payment": {
+      "entity": {
+        "id": "pay_synthetic_failed_101",
+        "entity": "payment",
+        "amount": 149900,
+        "currency": "INR",
+        "status": "failed",
+        "order_id": "order_synth_101",
+        "invoice_id": "inv_synth_101",
+        "international": false,
+        "method": "upi",
+        "amount_refunded": 0,
+        "refund_status": null,
+        "captured": false,
+        "description": "Cloud Hosting Subscription",
+        "card_id": null,
+        "bank": "HDFC",
+        "wallet": null,
+        "vpa": "customer@okhdfcbank",
+        "email": "synthetic_customer_101@example.com",
+        "contact": "+919900000101",
+        "customer_id": "cust_demo_7781",
+        "token_id": "token_mand_99812",
+        "notes": {
+          "subscription_type": "Cloud Hosting Subscription"
+        },
+        "error_code": "UPI_INSUFFICIENT_FUNDS",
+        "error_description": "The customer account does not have sufficient balance for UPI Autopay debit.",
+        "error_source": "customer",
+        "error_step": "payment_debit",
+        "error_reason": "insufficient_funds",
+        "created_at": 1772563200
+      }
+    }
+  }
+}

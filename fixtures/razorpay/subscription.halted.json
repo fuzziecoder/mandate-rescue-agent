@@ -1,0 +1,24 @@
+{
+  "entity": "event",
+  "account_id": "acc_synthetic_demo",
+  "event": "subscription.halted",
+  "event_id": "evt_fix_sub_halted_004",
+  "created_at": 1772563500,
+  "payload": {
+    "subscription": {
+      "entity": {
+        "id": "sub_synthetic_pend_202",
+        "entity": "subscription",
+        "plan_id": "plan_pro_annual",
+        "customer_id": "cust_demo_7782",
+        "status": "halted",
+        "amount": 249900,
+        "currency": "INR",
+        "token_id": "token_mand_99813",
+        "error_code": "EXHAUSTED_RETRIES",
+        "error_description": "Subscription halted after maximum auto-retry attempts reached on bank network.",
+        "created_at": 1772563500
+      }
+    }
+  }
+}

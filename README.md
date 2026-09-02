@@ -110,6 +110,55 @@ Supported root-cause categories:
 
 The LLM is not responsible for money movement, retry limits, or compliance decisions. It is used only as a fallback classification assistant for unclear error data.
 
+### Optional Puter AI Assist
+
+- Puter is used only in the browser after an explicit user click.
+- It can provide an optional suggestion for ambiguous synthetic payment-error classification.
+- A Puter sign-in may be required.
+- No API key is stored by Mandate Rescue.
+- No real payment or personally identifying customer data is sent.
+- The server validates every submitted suggestion against allowlisted causes.
+- Deterministic rules remain responsible for decisions, guardrails, execution, and ledger accounting.
+- This feature is optional and is not used for automatic batch processing.
+
+### Optional NVIDIA NIM Ambiguous Tie-Breaker
+
+- Uses NVIDIA NIM with `nvidia/nemotron-3.5-lightning-30b-a3b` when explicitly enabled (`LLM_TIEBREAK_ENABLED=true`).
+- Runs server-side only.
+- Is used only for ambiguous synthetic payment-error root-cause classification.
+- Known errors use deterministic rules and do not invoke the model.
+- Model results are allowlist-validated.
+- No real customer PII or payment credentials are sent.
+- If unavailable, the case becomes `unknown` and is routed for manual review.
+- Decisions, guardrails, sandbox execution, and Recovery Ledger entries remain deterministic.
+- The project does not integrate with live payment rails.
+
+## Razorpay Webhook-Ready Integration
+
+Mandate Rescue does not connect directly to banks or NPCI. In a production deployment, merchant-authorized payment-provider webhooks would be the event source. This repository includes a Razorpay-like webhook adapter and synthetic fixtures to demonstrate the integration path in sandbox mode.
+
+- `payment.failed` / `subscription.pending` can create a recovery case.
+- `payment.captured` / `subscription.charged` are used to verify a successful recovery.
+- The Recovery Ledger is updated only after a verified provider-success event.
+- Webhook signatures are checked in production mode using `RAZORPAY_WEBHOOK_SECRET`.
+- Fixtures/test route run only in simulation mode.
+- Current project does not receive live Razorpay events, debit accounts, or contact real customers.
+- Provider rails, not Mandate Rescue, remain responsible for actual mandate execution/retries.
+
+### Webhook Adapter Usage
+
+```bash
+# Run fixture adapter test without external credentials
+npx tsx scripts/test-razorpay-webhook.ts
+
+# Start dashboard
+npm run dev
+
+# Trigger synthetic event via fixture runner script
+npx tsx scripts/send-razorpay-fixture.ts payment.failed
+npx tsx scripts/send-razorpay-fixture.ts subscription.charged
+```
+
 ### 2. Decide — Decision and Escalation Layer
 
 After classifying a transaction, the decision engine maps the failure cause and customer payment history to a recovery action.

@@ -130,7 +130,7 @@ export default function AuditPage() {
               placeholder="Search by transaction ID or customer..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-4 py-2 text-xs text-white placeholder-slate-500 font-mono focus:outline-none focus:border-cyan-500"
+              className="w-full bg-zinc-950/90 border border-zinc-800 rounded-lg pl-9 pr-4 py-2 text-xs text-slate-200 placeholder-slate-500 font-mono focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 transition-colors"
             />
           </div>
           <Button type="submit" variant="outline" size="sm">Search</Button>
@@ -144,25 +144,25 @@ export default function AuditPage() {
           <select
             value={causeFilter}
             onChange={(e) => { setCauseFilter(e.target.value); setPage(1); }}
-            className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white font-mono"
+            className="bg-zinc-950/90 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 cursor-pointer transition-colors"
           >
-            <option value="all">All Causes</option>
-            <option value="insufficient_balance">Insufficient Balance</option>
-            <option value="bank_downtime">Bank Downtime</option>
-            <option value="mandate_expired">Mandate Expired</option>
-            <option value="limit_exceeded">Limit Exceeded</option>
+            <option value="all" className="bg-zinc-950 text-slate-200">All Causes</option>
+            <option value="insufficient_balance" className="bg-zinc-950 text-slate-200">Insufficient Balance</option>
+            <option value="bank_downtime" className="bg-zinc-950 text-slate-200">Bank Downtime</option>
+            <option value="mandate_expired" className="bg-zinc-950 text-slate-200">Mandate Expired</option>
+            <option value="limit_exceeded" className="bg-zinc-950 text-slate-200">Limit Exceeded</option>
           </select>
 
           <select
             value={outcomeFilter}
             onChange={(e) => { setOutcomeFilter(e.target.value); setPage(1); }}
-            className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white font-mono"
+            className="bg-zinc-950/90 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 cursor-pointer transition-colors"
           >
-            <option value="all">All Outcomes</option>
-            <option value="recovered">Recovered</option>
-            <option value="pending">Pending</option>
-            <option value="still_failed">Failed</option>
-            <option value="stopped">Stopped</option>
+            <option value="all" className="bg-zinc-950 text-slate-200">All Outcomes</option>
+            <option value="recovered" className="bg-zinc-950 text-slate-200">Recovered</option>
+            <option value="pending" className="bg-zinc-950 text-slate-200">Pending</option>
+            <option value="still_failed" className="bg-zinc-950 text-slate-200">Failed</option>
+            <option value="stopped" className="bg-zinc-950 text-slate-200">Stopped</option>
           </select>
         </div>
       </div>

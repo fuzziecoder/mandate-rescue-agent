@@ -5999,6 +5999,26 @@
         "past_retry_attempts": 3
       },
       "subscription_type": "Ott streaming Annual"
+    },
+    {
+      "id": "rzp_pay_synthetic_failed_101",
+      "customer_id": "cust_demo_7781",
+      "amount": 1499,
+      "currency": "INR",
+      "mandate_id": "token_mand_99812",
+      "bank_name": "HDFC",
+      "error_code": "UPI_INSUFFICIENT_FUNDS",
+      "error_message": "The customer account does not have sufficient balance for UPI Autopay debit.",
+      "failed_at": "2026-03-03T18:40:00.000Z",
+      "subscription_type": "Cloud Hosting Subscription",
+      "customer_payment_history": {
+        "past_success_rate": 0,
+        "avg_balance_pattern": "unknown",
+        "payment_timing": "unknown",
+        "opt_out": false,
+        "recent_nudges_count": 0,
+        "past_retry_attempts": 0
+      }
     }
   ],
   "classifications": [
@@ -8101,6 +8121,13 @@
       "confidence": 1,
       "reasoning_text": "Classified via rule: End date of authorization mandate range has passed.",
       "method": "rule"
+    },
+    {
+      "transaction_id": "rzp_pay_synthetic_failed_101",
+      "predicted_cause": "insufficient_balance",
+      "confidence": 0.95,
+      "reasoning_text": "Matched known payment-provider error code/rule for low balance.",
+      "method": "rule"
     }
   ],
   "decisions": [
@@ -9603,6 +9630,11 @@
       "transaction_id": "txn_00218",
       "chosen_action": "reauth",
       "reasoning_text": "Mandate is no longer legally authorized. Redirecting user to complete re-authorization flow."
+    },
+    {
+      "transaction_id": "rzp_pay_synthetic_failed_101",
+      "chosen_action": "nudge",
+      "reasoning_text": "Trusted customer (success rate 80%). Sending polite Hinglish text notification first."
     }
   ],
   "guardrail_checks": [
@@ -11705,6 +11737,13 @@
       "passed": true,
       "detail": "All guardrails passed",
       "id": 300
+    },
+    {
+      "transaction_id": "rzp_pay_synthetic_failed_101",
+      "check_name": "quiet_hours",
+      "passed": false,
+      "detail": "Quiet hours violation (8 PM - 9 AM IST)",
+      "id": 301
     }
   ],
   "executions": [
@@ -13807,6 +13846,12 @@
       "outcome": "recovered",
       "amount_recovered": 842,
       "executed_at": "2026-09-02T15:11:34.011Z"
+    },
+    {
+      "transaction_id": "rzp_pay_synthetic_failed_101",
+      "outcome": "recovered",
+      "recovered_amount": 1499,
+      "timestamp": "2026-09-02T16:42:33.308Z"
     }
   ],
   "audit_log": [
@@ -27309,6 +27354,67 @@
       },
       "created_at": "2026-09-02T15:11:34.467Z",
       "id": 300
+    },
+    {
+      "transaction_id": "rzp_pay_synthetic_failed_101",
+      "stage": "provider_webhook_received",
+      "event_type": "razorpay_failure_event_received",
+      "detail": "Razorpay webhook payment.failed received in simulation mode for event evt_fix_pay_failed_001",
+      "timestamp": "2026-09-02T16:42:00.414Z",
+      "id": 301
+    },
+    {
+      "transaction_id": "rzp_pay_synthetic_failed_101",
+      "stage": "execute",
+      "payload": {
+        "status": "stopped",
+        "steps": [
+          {
+            "stage": "classify",
+            "payload": {
+              "cause": "low_balance",
+              "confidence": 0.95,
+              "reasoning": "Matched known payment-provider error code/rule for low balance."
+            },
+            "timestamp": "2026-09-02T16:42:00.429Z"
+          },
+          {
+            "stage": "decide",
+            "payload": {
+              "action": "nudge",
+              "reasoning": "Trusted customer (success rate 80%). Sending polite Hinglish text notification first.",
+              "scheduleDelayHours": 0
+            },
+            "timestamp": "2026-09-02T16:42:00.445Z"
+          },
+          {
+            "stage": "guardrail",
+            "payload": {
+              "allowed": false,
+              "reason": "Quiet hours violation (8 PM - 9 AM IST)"
+            },
+            "timestamp": "2026-09-02T16:42:00.472Z"
+          },
+          {
+            "stage": "execute",
+            "payload": {
+              "outcome": "stopped",
+              "finalAction": "stop"
+            },
+            "timestamp": "2026-09-02T16:42:00.485Z"
+          }
+        ]
+      },
+      "created_at": "2026-09-02T16:42:00.498Z",
+      "id": 302
+    },
+    {
+      "transaction_id": "rzp_pay_synthetic_failed_101",
+      "stage": "provider_verified_recovery",
+      "event_type": "razorpay_success_verified",
+      "detail": "Verified success webhook evt_fix_sub_charged_003 for amount ₹1499",
+      "timestamp": "2026-09-02T16:42:33.292Z",
+      "id": 303
     }
   ],
   "promises": [],
@@ -28622,9 +28728,39 @@
       "channel": "web_reauth",
       "timestamp": "2026-09-02T15:11:34.144Z",
       "confidence": 1
+    },
+    {
+      "id": "LDG-SDIZOOG4W",
+      "transaction_id": "rzp_pay_synthetic_failed_101",
+      "amount": 1499,
+      "root_cause": "insufficient_balance",
+      "recovery_action_used": "retry",
+      "channel": "razorpay_webhook",
+      "timestamp": "2026-09-02T16:42:33.336Z",
+      "confidence": 1
     }
   ],
   "settings": {
     "pause_outgoing_contacts": false
-  }
+  },
+  "webhook_receipts": [
+    {
+      "provider": "razorpay",
+      "provider_event_id": "evt_fix_pay_failed_001",
+      "provider_event_type": "payment.failed",
+      "received_at": "2026-09-02T16:42:00.376Z",
+      "payload_hash": "c76bddcc5138ad81971e63c7dd057540d8de072865abfd7b94aaf87e29e22d25",
+      "processing_status": "processed",
+      "normalized_transaction_id": "rzp_pay_synthetic_failed_101"
+    },
+    {
+      "provider": "razorpay",
+      "provider_event_id": "evt_fix_sub_charged_003",
+      "provider_event_type": "subscription.charged",
+      "received_at": "2026-09-02T16:42:33.268Z",
+      "payload_hash": "c601d7e9aca59b29ae7448cbe2d6b9a50ca6f8b689fdc29f3b556e292d4c5ac3",
+      "processing_status": "processed",
+      "normalized_transaction_id": "rzp_pay_synthetic_failed_101"
+    }
+  ]
 }

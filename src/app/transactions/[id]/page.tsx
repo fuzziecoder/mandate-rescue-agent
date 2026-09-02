@@ -27,6 +27,7 @@ import {
   Button, 
   Skeleton 
 } from '@/components/ui';
+import { PuterTieBreakAssistant } from '@/components/transactions/PuterTieBreakAssistant';
 
 interface TraceData {
   transaction: {
@@ -306,6 +307,22 @@ export default function TransactionTrace({ params }: { params: { id: string } })
               ) : (
                 <p className="text-xs text-slate-500 italic mt-2">Awaiting classification trigger...</p>
               )}
+
+              {/* Optional Puter AI Tie-Break Assistant */}
+              <div className="mt-4 pt-3 border-t border-slate-800">
+                <PuterTieBreakAssistant
+                  transactionId={transaction.id}
+                  errorCode={transaction.error_code}
+                  errorMessage={transaction.error_message}
+                  bankName={transaction.bank_name}
+                  amount={transaction.amount}
+                  failedAt={transaction.failed_at}
+                  currentCause={classification?.predicted_cause}
+                  currentClassifier={classification?.method}
+                  currentConfidence={classification?.confidence}
+                  onSuggestionApplied={fetchTrace}
+                />
+              </div>
             </CardContent>
           </Card>
         </div>
