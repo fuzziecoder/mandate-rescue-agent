@@ -1,85 +1,99 @@
 import { NextResponse } from 'next/server';
-import { getGuardrailChecks, getGlobalSettings, getTransactions, getDecisions } from '@/lib/db';
+import { getGuardrailChecks, getSettings, updateSettings, getLatestBatchRun, appendAuditLog } from '@/lib/db';
 
 export async function GET() {
   try {
-    const [checks, settings, transactions, decisions] = await Promise.all([
+    const [checks, settings, latestBatchRecord] = await Promise.all([
       getGuardrailChecks(),
-      getGlobalSettings(),
-      getTransactions(),
-      getDecisions(),
+      getSettings(),
+      getLatestBatchRun(),
     ]);
 
-    const txMap = new Map(transactions.map(t => [t.id, t]));
-    const decMap = new Map(decisions.map(d => [d.transaction_id, d]));
-
-    const totalChecked = checks.length;
+    let totalChecked = checks.length;
     let allowed = 0;
     let blocked = 0;
     let quietHoursBlocked = 0;
     let retryCapBlocked = 0;
     let nudgeCapBlocked = 0;
     let optOutBlocked = 0;
+    let killSwitchBlocked = 0;
 
-    const events = checks.map(c => {
-      const isAllowed = c.passed;
-      if (isAllowed) {
+    for (const check of checks) {
+      if (check.passed) {
         allowed++;
       } else {
         blocked++;
-        if (c.check_name === 'quiet_hours') quietHoursBlocked++;
-        else if (c.check_name === 'retry_cap') retryCapBlocked++;
-        else if (c.check_name === 'max_contacts') nudgeCapBlocked++;
-        else if (c.check_name === 'opt_out') optOutBlocked++;
+        const detail = (check.detail || '').toLowerCase();
+        if (check.check_name === 'quiet_hours' || detail.includes('quiet hour')) {
+          quietHoursBlocked++;
+        } else if (check.check_name === 'retry_cap' || detail.includes('retry cap')) {
+          retryCapBlocked++;
+        } else if (check.check_name === 'max_contacts' || detail.includes('nudge cap') || detail.includes('weekly nudge')) {
+          nudgeCapBlocked++;
+        } else if (check.check_name === 'opt_out' || detail.includes('opted out') || detail.includes('opt out')) {
+          optOutBlocked++;
+        } else if (detail.includes('kill-switch') || detail.includes('kill switch')) {
+          killSwitchBlocked++;
+        }
       }
+    }
 
-      const tx = txMap.get(c.transaction_id);
-      const dec = decMap.get(c.transaction_id);
+    const summary = {
+      totalChecked,
+      allowed,
+      blocked,
+      quietHoursBlocked,
+      retryCapBlocked,
+      nudgeCapBlocked,
+      optOutBlocked,
+      killSwitchBlocked,
+      killSwitchActive: settings.dispatch_kill_switch,
+    };
 
-      return {
-        transaction_id: c.transaction_id,
-        timestamp: tx?.failed_at || new Date().toISOString(),
-        allowed: c.passed,
-        reason: c.detail,
-        rule: c.check_name,
-        action: dec?.chosen_action || 'unknown',
-        customer_id: tx?.customer_id || 'unknown',
-      };
-    });
+    const events = (checks || []).slice(-30).reverse();
 
-    // Sort events by timestamp DESC
-    events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const latestBatch = latestBatchRecord
+      ? {
+          id: latestBatchRecord.id,
+          status: latestBatchRecord.status,
+          processed: latestBatchRecord.processed,
+          total: latestBatchRecord.total,
+        }
+      : {};
 
     return NextResponse.json({
-      summary: {
-        totalChecked,
-        allowed,
-        blocked,
-        quietHoursBlocked,
-        retryCapBlocked,
-        nudgeCapBlocked,
-        optOutBlocked,
-        killSwitchActive: settings?.pause_outgoing_contacts ?? false,
-        note: totalChecked === 0 ? 'No observed events in this batch.' : undefined,
-      },
+      dispatchKillSwitch: settings.dispatch_kill_switch,
+      summary,
       events,
+      latestBatch,
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { paused } = body;
-    if (paused === undefined) {
-      return NextResponse.json({ error: 'Missing paused parameter' }, { status: 400 });
-    }
-    const { saveGlobalSettings } = await import('@/lib/db');
-    await saveGlobalSettings({ pause_outgoing_contacts: !!paused });
-    return NextResponse.json({ success: true, paused: !!paused });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const pauseState = typeof body.paused === 'boolean' ? body.paused :
+                       typeof body.dispatchKillSwitch === 'boolean' ? body.dispatchKillSwitch :
+                       typeof body.killSwitchActive === 'boolean' ? body.killSwitchActive : true;
+
+    await updateSettings({
+      dispatch_kill_switch: pauseState,
+      updated_at: new Date().toISOString(),
+      updated_by: 'guardrails_ui',
+    });
+
+    await appendAuditLog({
+      transaction_id: 'SYSTEM',
+      stage: 'guardrails',
+      event_type: pauseState ? 'dispatch_kill_switch_enabled' : 'dispatch_kill_switch_disabled',
+      detail: `Dispatch kill switch set to ${pauseState} via Guardrails API`,
+    });
+
+    return NextResponse.json({ success: true, dispatchKillSwitch: pauseState });
+  } catch (err: any) {
+    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }

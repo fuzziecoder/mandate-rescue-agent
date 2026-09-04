@@ -105,7 +105,7 @@ export function normalizeTransactionView(
     guardrail_allowed: guardrailAllowed,
     guardrail_reason: guardrailReason,
     outcome: mappedOutcome,
-    recovered_amount: ledger ? ledger.amount : (exec?.outcome === 'recovered' ? exec.amount_recovered : 0),
+    recovered_amount: ledger ? ledger.amount : (exec?.outcome === 'recovered' ? (exec.amount_recovered ?? 0) : 0),
     audit_steps: audit?.payload?.steps || [],
     ledger_entry_id: ledger?.id || null,
   };

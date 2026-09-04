@@ -2,7 +2,7 @@ import { FailedTransaction, RootCause, RecoveryAction, PipelineStep, Outcome } f
 import { classifyFailure } from './classify';
 import { decideRecovery } from './decide';
 import { contactAllowed } from './guardrails';
-import { postRecovery } from './ledger';
+import { postRecoveryOnce } from './ledger';
 import { saveClassification, saveDecision, saveGuardrailCheck, saveExecution, saveAuditLog } from './db';
 
 export interface PipelineTrace {
@@ -14,12 +14,14 @@ export interface PipelineTrace {
 
 export async function processTransactionPipeline(
   tx: FailedTransaction,
-  currentDateStr?: string
+  currentDateStr?: string,
+  onStageChange?: (stage: 'classify' | 'decide' | 'guardrails' | 'execute') => void
 ): Promise<PipelineTrace> {
   const steps: PipelineStep[] = [];
   const start = new Date().toISOString();
 
   // 1. CLASSIFY
+  onStageChange?.('classify');
   const classification = classifyFailure(tx);
   steps.push({
     stage: 'classify',
@@ -39,6 +41,7 @@ export async function processTransactionPipeline(
   });
 
   // 2. DECIDE
+  onStageChange?.('decide');
   const decision = decideRecovery(classification.cause, tx);
   steps.push({
     stage: 'decide',
@@ -54,6 +57,7 @@ export async function processTransactionPipeline(
   });
 
   // 3. GUARDRAILS
+  onStageChange?.('guardrails');
   const guardrailCheck = await contactAllowed(tx, decision.action, currentDateStr);
   steps.push({
     stage: 'guardrail',
@@ -69,6 +73,7 @@ export async function processTransactionPipeline(
   });
 
   // 4. EXECUTE (Simulation)
+  onStageChange?.('execute');
   let outcome: Outcome = 'pending';
   let finalAction: RecoveryAction = decision.action;
 
@@ -119,20 +124,31 @@ export async function processTransactionPipeline(
     executed_at: new Date().toISOString()
   });
 
-  // Post to Recovery Ledger if recovered successfully
+  // Post to Recovery Ledger if recovered successfully (idempotent write)
   if (outcome === 'recovered') {
     const channel = finalAction === 'nudge' ? 'sms' : 
                     finalAction === 'retry' ? 'auto_retry' : 
                     finalAction === 'reauth' ? 'web_reauth' : 'unknown';
-    await postRecovery({
+    const ledgerRes = await postRecoveryOnce({
       transactionId: tx.id,
       amount: tx.amount,
       rootCause: classification.cause,
       recoveryActionUsed: finalAction,
       channel,
       timestamp: new Date().toISOString(),
-      confidence: classification.confidence
+      confidence: classification.confidence,
+      source: 'pipeline_executor',
     });
+
+    if (ledgerRes.duplicate) {
+      await saveAuditLog({
+        transaction_id: tx.id,
+        stage: 'execute',
+        event_type: 'duplicate_recovery_prevented',
+        detail: `Duplicate recovery attempt prevented for transaction ${tx.id}. Ledger entry already exists.`,
+        created_at: new Date().toISOString(),
+      });
+    }
   }
 
   // Save audit log trace

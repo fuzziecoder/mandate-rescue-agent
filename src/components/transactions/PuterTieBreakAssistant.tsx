@@ -48,10 +48,6 @@ export function PuterTieBreakAssistant({
     currentClassifier === 'fallback_unknown' ||
     (currentConfidence !== null && currentConfidence !== undefined && currentConfidence < 0.70);
 
-  if (!isAmbiguous) {
-    return null;
-  }
-
   const handleAskAi = async () => {
     if (loading) return;
     setLoading(true);
@@ -108,7 +104,7 @@ Synthetic transaction metadata:
       if (typeof response === 'string') {
         text = response;
       } else if (response && response.message && response.message.content) {
-        text = response.message.content;
+        text = String(response.message.content);
       } else if (response && (response as any).text) {
         text = (response as any).text;
       }
@@ -166,7 +162,7 @@ Synthetic transaction metadata:
         })
       });
       const data = await res.json();
-      if (data.success) {
+      if (data.ok || data.success) {
         setStatusMessage(data.message || (action === 'apply' ? 'Suggestion applied successfully.' : 'Suggestion rejected.'));
         setSuggestion(null);
         if (onSuggestionApplied) {

@@ -174,7 +174,7 @@ export default function TransactionsList() {
   };
 
   const getCauseBadge = (cause: string | null) => {
-    if (!cause) return <Badge variant="outline" className="text-slate-500">Unclassified</Badge>;
+    if (!cause) return <Badge variant="slate" className="text-slate-500">Unclassified</Badge>;
     const names: Record<string, string> = {
       insufficient_balance: 'Low Balance',
       bank_downtime: 'Bank Offline',

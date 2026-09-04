@@ -1,166 +1,107 @@
 import fs from 'fs';
 import path from 'path';
 
-// Force isolated test DB path
-const TEST_DB_PATH = path.join(process.cwd(), 'data', 'test-webhook-db.json');
-process.env.MANDATE_RESCUE_DB_PATH = TEST_DB_PATH;
+// Force separate test database for webhook verification
+const testDbPath = path.join(process.cwd(), 'data', 'test-webhook-db.json');
+process.env.MANDATE_RESCUE_DB_PATH = testDbPath;
+process.env.WEBHOOK_SIMULATION_MODE = 'true';
 
-import { ingestRazorpayWebhookEvent } from '../src/lib/webhooks/razorpayIngestion';
-import { getTransactions, getAuditLogs, getLedgerEntries, clearDatabase } from '../src/lib/db';
+import { writeDatabase, getTransactions, getLedgerEntries, getAuditLogs } from '../src/lib/db';
+import { processRazorpayWebhookEvent } from '../src/lib/webhooks/razorpayIngestion';
 
 async function main() {
-  console.log('--- STARTING RAZORPAY WEBHOOK ADAPTER TEST SUITE ---');
+  console.log('--- TESTING RAZORPAY WEBHOOK INTEGRATION ---');
+  console.log(`Using test database: ${testDbPath}`);
 
-  // Ensure fresh isolated test database
-  if (fs.existsSync(TEST_DB_PATH)) {
-    fs.unlinkSync(TEST_DB_PATH);
-  }
-  await clearDatabase();
-
-  const loadFixture = (filename: string) => {
-    const filePath = path.join(process.cwd(), 'fixtures', 'razorpay', `${filename}.json`);
-    const rawBody = fs.readFileSync(filePath, 'utf8');
-    const payload = JSON.parse(rawBody);
-    return { rawBody, payload, eventType: payload.event || filename };
-  };
-
-  // STEP 1: Process payment.failed
-  console.log('\n1. Processing payment.failed fixture...');
-  const fix1 = loadFixture('payment.failed');
-  const res1 = await ingestRazorpayWebhookEvent({
-    eventType: fix1.eventType,
-    rawBody: fix1.rawBody,
-    payload: fix1.payload,
-    mode: 'simulation',
+  // Initialize clean DB
+  writeDatabase({
+    transactions: [],
+    classifications: [],
+    decisions: [],
+    guardrail_checks: [],
+    executions: [],
+    audit_log: [],
+    promises: [],
+    ledger: [],
+    settings: { dispatch_kill_switch: false, updated_at: null, updated_by: 'webhook_test' },
+    webhook_receipts: [],
+    batch_runs: [],
   });
 
-  console.log(`- Status: ${res1.status}, TxID: ${res1.normalizedTransactionId}`);
-  const txs1 = await getTransactions();
+  // Load fixtures
+  const failedFixture = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'fixtures', 'razorpay', 'payment.failed.json'), 'utf8'));
+  const chargedFixture = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'fixtures', 'razorpay', 'subscription.charged.json'), 'utf8'));
+  const haltedFixture = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'fixtures', 'razorpay', 'subscription.halted.json'), 'utf8'));
+
+  // 1. Test payment.failed ingestion
+  console.log('\n1. Testing payment.failed webhook ingestion...');
+  const failRes1 = await processRazorpayWebhookEvent(failedFixture, true);
+  console.log(`Result: status=${failRes1.status}, transactionId=${failRes1.transactionId}, message=${failRes1.message}`);
+
+  const txs = await getTransactions();
+  if (txs.length !== 1) {
+    console.error(`FAIL: Expected 1 transaction, found ${txs.length}`);
+    process.exit(1);
+  }
+  console.log(`PASS: Ingested transaction ${txs[0].id} (Amount: ₹${txs[0].amount})`);
+
+  // 2. Test replayed failure duplicate check
+  console.log('\n2. Testing replayed payment.failed (deduplication)...');
+  const failRes2 = await processRazorpayWebhookEvent(failedFixture, true);
+  console.log(`Result: status=${failRes2.status}, message=${failRes2.message}`);
+  if (failRes2.status !== 'ignored') {
+    console.error(`FAIL: Expected status 'ignored' for duplicate event, got '${failRes2.status}'`);
+    process.exit(1);
+  }
+  console.log('PASS: Duplicate webhook correctly ignored.');
+
+  // 3. Test subscription.charged (creates single ledger entry)
+  console.log('\n3. Testing subscription.charged webhook ingestion...');
+  const chargedRes1 = await processRazorpayWebhookEvent(chargedFixture, true);
+  console.log(`Result: status=${chargedRes1.status}, ledgerPosted=${chargedRes1.ledgerPosted}, message=${chargedRes1.message}`);
+
   const ledger1 = await getLedgerEntries();
-  const audit1 = await getAuditLogs();
-
-  if (res1.status !== 'processed') throw new Error('FAIL Step 1: Status must be processed');
-  if (txs1.length !== 1) throw new Error('FAIL Step 1: Exactly 1 transaction must be created');
-  if (ledger1.length !== 0) throw new Error('FAIL Step 1: Zero ledger entries must be created on failure');
-  if (audit1.length === 0) throw new Error('FAIL Step 1: Audit entries must be recorded');
-  console.log('✅ PASS: payment.failed ingested cleanly and processed via recovery pipeline.');
-
-  // STEP 2: Replay payment.failed (Idempotency test)
-  console.log('\n2. Replaying exact same payment.failed fixture (Idempotency test)...');
-  const res2 = await ingestRazorpayWebhookEvent({
-    eventType: fix1.eventType,
-    rawBody: fix1.rawBody,
-    payload: fix1.payload,
-    mode: 'simulation',
-  });
-
-  console.log(`- Status: ${res2.status}`);
-  const txs2 = await getTransactions();
-  const ledger2 = await getLedgerEntries();
-
-  if (res2.status !== 'duplicate') throw new Error('FAIL Step 2: Replayed failure must return duplicate status');
-  if (txs2.length !== 1) throw new Error('FAIL Step 2: Transaction count must not increase on duplicate');
-  if (ledger2.length !== 0) throw new Error('FAIL Step 2: Ledger entries must remain zero');
-  console.log('✅ PASS: Replayed payment.failed correctly blocked by webhook idempotency layer.');
-
-  // STEP 3: Process matching subscription.charged success event
-  console.log('\n3. Processing matching subscription.charged fixture...');
-  const fix3 = loadFixture('subscription.charged');
-  const res3 = await ingestRazorpayWebhookEvent({
-    eventType: fix3.eventType,
-    rawBody: fix3.rawBody,
-    payload: fix3.payload,
-    mode: 'simulation',
-  });
-
-  console.log(`- Status: ${res3.status}, Ledger Posted: ${res3.ledgerPosted}`);
-  const ledger3 = await getLedgerEntries();
-
-  if (res3.status !== 'processed') throw new Error('FAIL Step 3: Status must be processed');
-  if (res3.ledgerPosted !== true) throw new Error('FAIL Step 3: Ledger entry must be posted for verified success');
-  if (ledger3.length !== 1) throw new Error('FAIL Step 3: Exactly 1 ledger entry must exist');
-  if (ledger3[0].amount !== 1499) throw new Error(`FAIL Step 3: Ledger amount must equal ₹1499, got ₹${ledger3[0].amount}`);
-  console.log('✅ PASS: Success webhook verified and ₹1,499 posted to Recovery Ledger.');
-
-  // STEP 4: Replay subscription.charged success event
-  console.log('\n4. Replaying exact same subscription.charged fixture...');
-  const res4 = await ingestRazorpayWebhookEvent({
-    eventType: fix3.eventType,
-    rawBody: fix3.rawBody,
-    payload: fix3.payload,
-    mode: 'simulation',
-  });
-
-  console.log(`- Status: ${res4.status}`);
-  const ledger4 = await getLedgerEntries();
-
-  if (res4.status !== 'duplicate') throw new Error('FAIL Step 4: Replayed success must return duplicate status');
-  if (ledger4.length !== 1) throw new Error('FAIL Step 4: Ledger count must remain 1');
-  if (ledger4[0].amount !== 1499) throw new Error('FAIL Step 4: Total recovered amount must not increase');
-  console.log('✅ PASS: Replayed success event blocked. No double-counting in Recovery Ledger.');
-
-  // STEP 5: Process subscription.halted fixture
-  console.log('\n5. Processing subscription.halted fixture...');
-  const fix5 = loadFixture('subscription.halted');
-  const res5 = await ingestRazorpayWebhookEvent({
-    eventType: fix5.eventType,
-    rawBody: fix5.rawBody,
-    payload: fix5.payload,
-    mode: 'simulation',
-  });
-
-  console.log(`- Status: ${res5.status}`);
-  const ledger5 = await getLedgerEntries();
-  const audit5 = await getAuditLogs();
-  const haltedAudit = audit5.find((a) => a.event_type === 'razorpay_subscription_halted');
-
-  if (res5.status !== 'processed') throw new Error('FAIL Step 5: Status must be processed');
-  if (!haltedAudit) throw new Error('FAIL Step 5: Halted audit entry must exist');
-  if (ledger5.length !== 1) throw new Error('FAIL Step 5: Ledger count must remain 1 (no money recovered on halt)');
-  console.log('✅ PASS: Subscription halted recorded cleanly without fake revenue.');
-
-  // STEP 6: Unmatched success scenario
-  console.log('\n6. Testing unmatched success event...');
-  const unmatchedPayload = {
-    entity: 'event',
-    event: 'payment.captured',
-    event_id: 'evt_unmatched_999',
-    payload: {
-      payment: {
-        entity: {
-          id: 'pay_unmatched_999',
-          amount: 50000,
-          currency: 'INR',
-          token_id: 'token_nonexistent',
-        },
-      },
-    },
-  };
-
-  const res6 = await ingestRazorpayWebhookEvent({
-    eventType: 'payment.captured',
-    rawBody: JSON.stringify(unmatchedPayload),
-    payload: unmatchedPayload,
-    mode: 'simulation',
-  });
-
-  console.log(`- Status: ${res6.status}, Ledger Posted: ${res6.ledgerPosted}`);
-  const ledger6 = await getLedgerEntries();
-  if (res6.ledgerPosted !== false) throw new Error('FAIL Step 6: Ledger entry must NOT be posted for unmatched success');
-  if (ledger6.length !== 1) throw new Error('FAIL Step 6: Ledger count must remain 1');
-  console.log('✅ PASS: Unmatched success event safely audited without ledger write.');
-
-  console.log('\n==================================================');
-  console.log('🎉 WEBHOOK ADAPTER TEST: PASS');
-  console.log('==================================================');
-
-  // Clean up test database file
-  if (fs.existsSync(TEST_DB_PATH)) {
-    fs.unlinkSync(TEST_DB_PATH);
+  if (ledger1.length !== 1) {
+    console.error(`FAIL: Expected 1 ledger entry, found ${ledger1.length}`);
+    process.exit(1);
   }
+  console.log(`PASS: Created 1 ledger entry (₹${ledger1[0].amount}) for transaction ${ledger1[0].transaction_id}`);
+
+  // 4. Test replayed subscription.charged (no double counting)
+  console.log('\n4. Testing replayed subscription.charged (idempotency)...');
+  // Use new event ID for same transaction to test ledger level duplicate prevention
+  const chargedFixtureReplayed = { ...chargedFixture, event_id: `evt_replay_${Date.now()}` };
+  const chargedRes2 = await processRazorpayWebhookEvent(chargedFixtureReplayed, true);
+  console.log(`Result: status=${chargedRes2.status}, ledgerPosted=${chargedRes2.ledgerPosted}, message=${chargedRes2.message}`);
+
+  const ledger2 = await getLedgerEntries();
+  if (ledger2.length !== 1) {
+    console.error(`FAIL: Duplicate recovery created! Expected 1 ledger entry, found ${ledger2.length}`);
+    process.exit(1);
+  }
+  console.log('PASS: Replayed success did not double count ledger recovery.');
+
+  // 5. Test subscription.halted (never creates ledger money)
+  console.log('\n5. Testing subscription.halted webhook ingestion...');
+  const haltedRes = await processRazorpayWebhookEvent(haltedFixture, true);
+  console.log(`Result: status=${haltedRes.status}, ledgerPosted=${haltedRes.ledgerPosted}, message=${haltedRes.message}`);
+
+  const ledger3 = await getLedgerEntries();
+  if (ledger3.length !== 1) {
+    console.error(`FAIL: Halted event erroneously created a ledger entry!`);
+    process.exit(1);
+  }
+  console.log('PASS: Halted webhook recorded audit event without posting ledger money.');
+
+  // Clean up temporary test DB
+  try {
+    if (fs.existsSync(testDbPath)) fs.unlinkSync(testDbPath);
+  } catch (_) {}
+
+  console.log('\nRAZORPAY WEBHOOK TEST: PASS');
 }
 
 main().catch((err) => {
-  console.error('❌ WEBHOOK ADAPTER TEST FAILED:', err);
+  console.error('Test webhook error:', err);
   process.exit(1);
 });

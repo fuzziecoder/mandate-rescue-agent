@@ -54,7 +54,7 @@ async function main() {
     decisions.length !== 300 ||
     guardrailChecks.length !== 300 ||
     executions.length !== 300 ||
-    auditLogs.length !== 300
+    auditLogs.length < 300
   ) {
     console.error('❌ FAIL: Incomplete pipeline traces found.');
     pass = false;

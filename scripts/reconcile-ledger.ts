@@ -1,70 +1,107 @@
 import fs from 'fs';
 import path from 'path';
-
-const DB_PATH = path.join(process.cwd(), 'data', 'db.json');
+import { readDatabase, writeDatabase, getJsonDbPath } from '../src/lib/db';
+import { getLedgerReconciliation } from '../src/lib/ledger';
 
 async function main() {
-  if (!fs.existsSync(DB_PATH)) {
-    console.error('db.json not found!');
+  console.log('=== MANDATE RESCUE LEDGER RECONCILIATION ===');
+
+  const dbPath = getJsonDbPath();
+  if (!fs.existsSync(dbPath)) {
+    console.error(`Database file not found at ${dbPath}`);
     process.exit(1);
   }
 
-  // 1. Create backup
-  const backupPath = `${DB_PATH}.backup-${Date.now()}`;
-  fs.copyFileSync(DB_PATH, backupPath);
-  console.log(`Created backup at: ${backupPath}`);
+  // 1. Create a timestamped backup before modifying any data
+  const backupDir = path.join(path.dirname(dbPath), 'backups');
+  if (!fs.existsSync(backupDir)) {
+    fs.mkdirSync(backupDir, { recursive: true });
+  }
 
-  const rawData = fs.readFileSync(DB_PATH, 'utf8');
+  const timestampStr = new Date().toISOString().replace(/[:.]/g, '-');
+  const backupPath = path.join(backupDir, `db-before-ledger-reconcile-${timestampStr}.json`);
+
+  const rawData = fs.readFileSync(dbPath, 'utf8');
+  fs.writeFileSync(backupPath, rawData, 'utf8');
+  console.log(`Backup created successfully at: ${backupPath}`);
+
+  // 2. Read database records
   const db = JSON.parse(rawData);
+  const ledger = db.ledger || [];
+  const initialRowsCount = ledger.length;
 
-  if (!db.ledger) {
-    console.log('No ledger entries found.');
-    process.exit(0);
-  }
+  const initialUniqueTxIds = new Set(ledger.map((e: any) => e.transaction_id)).size;
+  const initialTotalRecovered = ledger.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
 
-  const beforeCount = db.ledger.length;
-  const beforeTotal = db.ledger.reduce((s: number, e: any) => s + Number(e.amount), 0);
+  console.log(`\nBefore Reconciliation:`);
+  console.log(`- Ledger rows count: ${initialRowsCount}`);
+  console.log(`- Unique recovered transaction IDs: ${initialUniqueTxIds}`);
+  console.log(`- Recovered total: ₹${initialTotalRecovered.toLocaleString('en-IN')}`);
 
-  // 2 & 3. Deduplicate and filter by successful execution
-  const executionsByTxId = new Map<string, any>(
-    db.executions?.map((e: any) => [e.transaction_id, e]) || []
-  );
-
-  // Sort ledger by timestamp ASC to keep the earliest entry
-  const sortedLedger = [...db.ledger].sort((a, b) => 
-    new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-  );
-
-  const retainedLedger: any[] = [];
+  // 3. Filter duplicate ledger entries: keep earliest valid entry for each transaction_id / idempotency_key
   const seenTxIds = new Set<string>();
+  const seenKeys = new Set<string>();
+  const retainedLedger: any[] = [];
+  const removedEntries: any[] = [];
 
-  for (const entry of sortedLedger) {
+  for (const entry of ledger) {
     const txId = entry.transaction_id;
-    if (seenTxIds.has(txId)) {
-      continue; // Skip duplicate
-    }
-    
-    // Check if there's a valid successful recovery for this txId
-    const execution = executionsByTxId.get(txId);
-    if (execution && execution.outcome === 'recovered') {
-      retainedLedger.push(entry);
+    const key = entry.idempotency_key || `recovery:${txId}`;
+
+    if (seenTxIds.has(txId) || seenKeys.has(key)) {
+      removedEntries.push(entry);
+    } else {
       seenTxIds.add(txId);
+      seenKeys.add(key);
+      retainedLedger.push({
+        ...entry,
+        idempotency_key: key,
+      });
     }
   }
 
+  const duplicateRowsRemoved = removedEntries.length;
+  const finalRowsCount = retainedLedger.length;
+  const finalTotalRecovered = retainedLedger.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+
+  // 4. Update db object
   db.ledger = retainedLedger;
 
-  const afterCount = db.ledger.length;
-  const afterTotal = db.ledger.reduce((s: number, e: any) => s + Number(e.amount), 0);
+  // Add audit logs for removed duplicates
+  if (!db.audit_log) db.audit_log = [];
+  for (const dup of removedEntries) {
+    db.audit_log.push({
+      id: `audit_recon_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      transaction_id: dup.transaction_id,
+      stage: 'execute',
+      event_type: 'ledger_duplicate_reconciled',
+      detail: `Duplicate ledger entry ${dup.id || ''} removed during reconciliation for transaction ${dup.transaction_id}.`,
+      created_at: new Date().toISOString(),
+      timestamp: new Date().toISOString(),
+    });
+  }
 
-  fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2), 'utf8');
+  // Write updated DB
+  writeDatabase(db);
 
-  console.log(`\nReconciliation Complete:`);
-  console.log(`Rows:     ${beforeCount} -> ${afterCount}`);
-  console.log(`Total:    ₹${beforeTotal.toLocaleString('en-IN')} -> ₹${afterTotal.toLocaleString('en-IN')}`);
+  // 5. Verify reconciliation
+  const recon = await getLedgerReconciliation();
+
+  console.log(`\nAfter Reconciliation:`);
+  console.log(`- Duplicate rows removed: ${duplicateRowsRemoved}`);
+  console.log(`- Ledger rows remaining: ${finalRowsCount}`);
+  console.log(`- Final recovered total: ₹${finalTotalRecovered.toLocaleString('en-IN')}`);
+  console.log(`- Reconciliation Status: ${recon.isBalanced ? 'BALANCED ✓' : 'UNBALANCED ❌'}`);
+
+  if (!recon.isBalanced) {
+    console.error('ERROR: Ledger reconciliation failed after cleanup!');
+    process.exit(1);
+  }
+
+  console.log('\nLEDGER RECONCILIATION: PASS');
 }
 
-main().catch(e => {
-  console.error(e);
+main().catch(err => {
+  console.error('Reconciliation error:', err);
   process.exit(1);
 });

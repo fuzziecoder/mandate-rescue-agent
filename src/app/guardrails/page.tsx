@@ -8,6 +8,7 @@ export default function GuardrailsPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; targetKillSwitch: boolean } | null>(null);
 
   const fetchGuardrails = async () => {
     setLoading(true);
@@ -28,18 +29,30 @@ export default function GuardrailsPage() {
 
   const summary = data?.summary || {};
   const events = data?.events || [];
+  const isKillSwitchActive = typeof data?.dispatchKillSwitch === 'boolean'
+    ? data.dispatchKillSwitch
+    : (summary.killSwitchActive ?? true);
 
-  const handleToggleKillSwitch = async () => {
+  const handleToggleClick = () => {
+    const targetState = !isKillSwitchActive;
+    setConfirmDialog({ open: true, targetKillSwitch: targetState });
+  };
+
+  const confirmToggleKillSwitch = async () => {
+    if (!confirmDialog) return;
+    const nextState = confirmDialog.targetKillSwitch;
+    setConfirmDialog(null);
     setToggling(true);
+
     try {
-      const res = await fetch('/api/guardrails', {
+      const res = await fetch('/api/settings/dispatch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paused: !summary.killSwitchActive }),
+        body: JSON.stringify({ dispatchKillSwitch: nextState }),
       });
       const json = await res.json();
-      if (json.success) {
-        fetchGuardrails();
+      if (json.dispatchKillSwitch !== undefined) {
+        await fetchGuardrails();
       }
     } catch (e) {
       console.error(e);
@@ -50,6 +63,38 @@ export default function GuardrailsPage() {
 
   return (
     <div className="space-y-8">
+      {/* Confirmation Modal */}
+      {confirmDialog?.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-[#0b1329] border border-slate-700 rounded-xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-fade-in">
+            <h3 className="text-lg font-bold text-white font-display">
+              {confirmDialog.targetKillSwitch ? 'Pause Recovery Dispatch?' : 'Enable Recovery Dispatch?'}
+            </h3>
+            <p className="text-sm text-slate-300">
+              {confirmDialog.targetKillSwitch
+                ? 'Pause simulated recovery dispatch? The active batch will stop before its next transaction.'
+                : 'Enable simulated recovery dispatch? This allows eligible sandbox recovery actions when a batch is explicitly resumed or started.'}
+            </p>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setConfirmDialog(null)}
+                className="border-slate-700 text-slate-300"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant={confirmDialog.targetKillSwitch ? 'outline' : 'signal'}
+                className={confirmDialog.targetKillSwitch ? 'border-rose-500/40 text-rose-400 hover:bg-rose-500/10' : ''}
+                onClick={confirmToggleKillSwitch}
+              >
+                Confirm
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center">
         <div>
           <h1 className="font-display text-3xl font-extrabold text-white tracking-tight">Bounded Executor / Guardrails</h1>
@@ -62,15 +107,15 @@ export default function GuardrailsPage() {
       </div>
 
       {/* Kill switch card */}
-      <Card className={`border-2 transition-all duration-300 ${summary.killSwitchActive ? 'border-rose-500/30 bg-rose-950/10' : 'border-emerald-500/20 bg-emerald-950/5'}`}>
+      <Card className={`border-2 transition-all duration-300 ${isKillSwitchActive ? 'border-rose-500/30 bg-rose-950/10' : 'border-emerald-500/20 bg-emerald-950/5'}`}>
         <CardHeader>
           <div className="flex justify-between items-center">
             <div>
               <CardTitle className="text-white">Global Dispatch Kill-Switch</CardTitle>
               <CardDescription>Instantly pause all recovery retries, nudges, and customer touchpoints.</CardDescription>
             </div>
-            <Badge variant={summary.killSwitchActive ? 'rose' : 'emerald'} className="font-bold tracking-wider py-1 px-3">
-              {summary.killSwitchActive ? 'PAUSED / LOCKED' : 'DISPATCH ACTIVE'}
+            <Badge variant={isKillSwitchActive ? 'rose' : 'emerald'} className="font-bold tracking-wider py-1 px-3">
+              {isKillSwitchActive ? 'PAUSED / LOCKED' : 'DISPATCH ENABLED'}
             </Badge>
           </div>
         </CardHeader>
@@ -78,8 +123,13 @@ export default function GuardrailsPage() {
           <p className="text-sm text-slate-400 max-w-xl">
             When enabled, the kill-switch overrides the pipeline executor layer. Any running batches will immediately cease all communications to protect client user experience.
           </p>
-          <Button variant="signal" onClick={handleToggleKillSwitch} disabled={toggling}>
-            {toggling ? <Loader2 className="animate-spin h-4 w-4" /> : summary.killSwitchActive ? 'Enable Dispatch' : 'TRIGGER HALT'}
+          <Button
+            variant={isKillSwitchActive ? 'signal' : 'outline'}
+            onClick={handleToggleClick}
+            disabled={toggling}
+            className={!isKillSwitchActive ? 'border-rose-500/40 text-rose-400 hover:bg-rose-500/10' : ''}
+          >
+            {toggling ? <Loader2 className="animate-spin h-4 w-4" /> : isKillSwitchActive ? 'Enable Dispatch' : 'Pause Dispatch'}
           </Button>
         </CardContent>
       </Card>
@@ -148,23 +198,29 @@ export default function GuardrailsPage() {
               <Loader2 className="h-8 w-8 animate-spin text-sky-500" />
             </div>
           ) : events.length === 0 ? (
-            <div className="text-center p-8 text-slate-500">No guardrails incidents triggered. All executions are fully compliant.</div>
+            <div className="text-center p-8 text-slate-500">No guardrails incidents recorded. All executions are fully compliant.</div>
           ) : (
             <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-              {events.map((ev: any, idx: number) => (
-                <div key={idx} className="flex justify-between items-start border-b border-slate-850 pb-3 text-sm">
-                  <div className="space-y-1">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-mono text-xs font-bold text-white">{ev.transaction_id}</span>
-                      <Badge variant={ev.allowed ? 'emerald' : 'rose'} className="font-mono text-[9px] uppercase">
-                        {ev.rule}: {ev.allowed ? 'PASSED' : 'BLOCKED'}
-                      </Badge>
+              {events.map((ev: any, idx: number) => {
+                const isPassed = ev.passed ?? ev.allowed ?? false;
+                const checkName = ev.check_name || ev.rule || 'check';
+                const detailText = ev.detail || ev.reason || 'Guardrail check';
+                const timestampText = ev.created_at || ev.timestamp || new Date().toISOString();
+                return (
+                  <div key={idx} className="flex justify-between items-start border-b border-slate-850 pb-3 text-sm">
+                    <div className="space-y-1">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-mono text-xs font-bold text-white">{ev.transaction_id || 'SYSTEM'}</span>
+                        <Badge variant={isPassed ? 'emerald' : 'rose'} className="font-mono text-[9px] uppercase">
+                          {checkName}: {isPassed ? 'PASSED' : 'BLOCKED'}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-slate-400 font-mono mt-1">{detailText}</p>
                     </div>
-                    <p className="text-xs text-slate-400 font-mono mt-1">{ev.reason}</p>
+                    <span className="text-xs text-slate-500 font-mono">{new Date(timestampText).toLocaleTimeString()}</span>
                   </div>
-                  <span className="text-xs text-slate-500 font-mono">{new Date(ev.timestamp).toLocaleTimeString()}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>

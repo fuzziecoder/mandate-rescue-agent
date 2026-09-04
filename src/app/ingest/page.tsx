@@ -66,7 +66,7 @@ export default function IngestPage() {
               </code>
             </div>
           </div>
-          <Badge variant="outline" className="font-mono text-[10px] text-slate-400">Local JSON Storage</Badge>
+          <Badge variant="slate" className="font-mono text-[10px] text-slate-400">Local JSON Storage</Badge>
         </div>
       </Card>
 

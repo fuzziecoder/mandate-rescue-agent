@@ -1,53 +1,53 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { ingestRazorpayWebhookEvent } from '@/lib/webhooks/razorpayIngestion';
+import { processRazorpayWebhookEvent } from '@/lib/webhooks/razorpayIngestion';
 
-export async function POST(request: NextRequest) {
-  if (process.env.WEBHOOK_SIMULATION_MODE !== 'true') {
-    return NextResponse.json({ error: 'Not Found' }, { status: 404 });
+const ALLOWED_FIXTURES = new Set([
+  'payment.failed',
+  'subscription.pending',
+  'subscription.charged',
+  'subscription.halted',
+]);
+
+export async function POST(request: Request) {
+  const isSimulationMode = (process.env.WEBHOOK_SIMULATION_MODE || 'true') === 'true';
+  if (!isSimulationMode) {
+    return NextResponse.json(
+      { error: 'Test webhook endpoint is disabled outside simulation mode.' },
+      { status: 403 }
+    );
   }
 
   try {
     const body = await request.json();
-    const fixtureName = body?.fixture;
+    const fixtureName = body.fixture || 'payment.failed';
 
-    const validFixtures = ['payment.failed', 'subscription.pending', 'subscription.charged', 'subscription.halted'];
-    if (!fixtureName || !validFixtures.includes(fixtureName)) {
+    if (!ALLOWED_FIXTURES.has(fixtureName)) {
       return NextResponse.json(
-        { error: `Invalid fixture. Allowed fixtures: ${validFixtures.join(', ')}` },
+        { error: `Invalid fixture name '${fixtureName}'. Allowed values: payment.failed, subscription.pending, subscription.charged, subscription.halted` },
         { status: 400 }
       );
     }
 
     const fixturePath = path.join(process.cwd(), 'fixtures', 'razorpay', `${fixtureName}.json`);
     if (!fs.existsSync(fixturePath)) {
-      return NextResponse.json({ error: `Fixture file not found: ${fixtureName}.json` }, { status: 404 });
+      return NextResponse.json(
+        { error: `Fixture file ${fixtureName}.json not found.` },
+        { status: 404 }
+      );
     }
 
-    const rawBody = fs.readFileSync(fixturePath, 'utf8');
-    const payload = JSON.parse(rawBody);
-    const eventType = payload.event || fixtureName;
+    const rawData = fs.readFileSync(fixturePath, 'utf8');
+    const fixtureData = JSON.parse(rawData);
 
-    const result = await ingestRazorpayWebhookEvent({
-      eventType,
-      rawBody,
-      payload,
-      mode: 'simulation',
-    });
+    const result = await processRazorpayWebhookEvent(fixtureData, true);
 
     return NextResponse.json({
       fixture: fixtureName,
-      status: result.status,
-      transactionId: result.normalizedTransactionId,
-      pipelineStatus: result.pipelineStatus || null,
-      ledgerPosted: result.ledgerPosted ?? false,
-      message: result.message,
+      ...result,
     });
   } catch (err: any) {
-    return NextResponse.json(
-      { error: err?.message || 'Error processing test fixture' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

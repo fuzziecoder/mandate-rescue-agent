@@ -1,5 +1,5 @@
 import { FailedTransaction } from './types';
-import { getGlobalSettings } from './db';
+import { getSettings } from './db';
 
 export function getISTHour(date: Date): number {
   try {
@@ -39,9 +39,9 @@ export async function contactAllowed(
   currentDateStr?: string
 ): Promise<{ allowed: boolean; reason: string }> {
   // Check global kill switch first
-  const settings = await getGlobalSettings();
-  if (settings.pause_outgoing_contacts) {
-    return { allowed: false, reason: 'Global kill-switch active' };
+  const settings = await getSettings();
+  if (settings.dispatch_kill_switch) {
+    return { allowed: false, reason: 'Global dispatch kill-switch active' };
   }
 
   const history = tx.customerPaymentHistory || (tx as any).customer_payment_history || {};

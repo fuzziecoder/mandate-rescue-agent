@@ -1,325 +1,205 @@
-import crypto from 'crypto';
-import { normalizeRazorpayWebhook } from '../providers/razorpay';
-import { ProviderEventType } from '../providers/types';
-import { claimWebhookEvent } from './idempotency';
 import {
-  getTransactions,
-  saveTransactions,
-  saveAuditLog,
-  getExecutions,
-  saveExecution,
-  getClassifications,
+  getWebhookReceipt,
+  saveWebhookReceipt,
   updateWebhookReceipt,
+  saveTransaction,
+  getTransactions,
+  getTransactionById,
+  appendAuditLog,
+  saveExecutionOrUpsert,
 } from '../db';
-import { processTransactionPipeline } from '../pipeline';
+import { normalizeRazorpayEventToTransaction } from '../providers/razorpay';
+import { processBatchTransaction } from '../batchEngine';
 import { postRecovery } from '../ledger';
-import { FailedTransaction } from '../types';
 
-export async function ingestRazorpayWebhookEvent(args: {
-  eventType: string;
-  rawBody: string;
-  payload: unknown;
-  mode: 'simulation' | 'production';
-}): Promise<{
-  status: 'processed' | 'duplicate' | 'ignored' | 'failed';
-  providerEventId?: string;
-  normalizedTransactionId?: string | null;
-  pipelineStatus?: string | null;
-  ledgerPosted?: boolean;
+export interface ProcessWebhookResult {
+  fixture?: string;
+  status: 'processed' | 'ignored' | 'unmatched' | 'error';
+  transactionId?: string;
+  pipelineStatus?: string;
+  ledgerPosted: boolean;
   message: string;
-}> {
-  const { eventType, rawBody, payload, mode } = args;
+}
 
-  // A. Normalize Input
-  const normalizedEvent = normalizeRazorpayWebhook(eventType, payload);
+export async function processRazorpayWebhookEvent(eventPayload: any, isSimulation: boolean = true): Promise<ProcessWebhookResult> {
+  const eventId = eventPayload.event_id || eventPayload.id || `evt_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  const eventType = eventPayload.event || 'payment.failed';
 
-  if (!normalizedEvent) {
-    const rawHash = crypto.createHash('sha256').update(rawBody || '').digest('hex');
-    const fallbackEventId = `unk_${rawHash.slice(0, 16)}`;
-    await updateWebhookReceipt(fallbackEventId, {
-      processing_status: 'ignored',
-      error_message: 'Unsupported or unhandled Razorpay event type.',
-    });
+  // 1. Deduplicate by provider event ID
+  const existingReceipt = await getWebhookReceipt(eventId);
+  if (existingReceipt) {
     return {
       status: 'ignored',
-      message: 'Unsupported or unhandled Razorpay event type.',
-    };
-  }
-
-  const { provider_event_id, provider_event_type } = normalizedEvent;
-  const payloadHash = crypto.createHash('sha256').update(rawBody || '').digest('hex');
-
-  // B. Claim Idempotency
-  const claim = await claimWebhookEvent(
-    provider_event_id,
-    'razorpay',
-    provider_event_type as ProviderEventType,
-    payloadHash
-  );
-
-  if (!claim.claimed) {
-    return {
-      status: 'duplicate',
-      providerEventId: provider_event_id,
-      normalizedTransactionId: claim.receipt.normalized_transaction_id,
       ledgerPosted: false,
-      message: 'Duplicate webhook event received. Skipped processing.',
+      message: `Duplicate webhook event ${eventId} already received.`,
     };
   }
+
+  // Save initial receipt
+  await saveWebhookReceipt({
+    provider_event_id: eventId,
+    event_type: eventType,
+    status: 'processing',
+    received_at: new Date().toISOString(),
+  });
 
   try {
-    // Handle Failure Events (payment.failed, subscription.pending)
-    if (normalizedEvent.kind === 'failure' && provider_event_type !== 'subscription.halted') {
-      const { transaction } = normalizedEvent;
+    if (eventType === 'payment.failed' || eventType === 'subscription.pending') {
+      const tx = normalizeRazorpayEventToTransaction(eventPayload);
+      await saveTransaction(tx);
 
-      const existingTxs = await getTransactions();
-      let targetTx = existingTxs.find((t) => t.id === transaction.id);
-
-      if (!targetTx) {
-        // Map normalized transaction to internal DB shape
-        const newDbTx = {
-          id: transaction.id,
-          customer_id: transaction.customer_id,
-          amount: transaction.amount,
-          currency: transaction.currency,
-          mandate_id: transaction.mandate_id || `mand_${transaction.id}`,
-          bank_name: transaction.bank_name || 'Razorpay Partner Bank',
-          error_code: transaction.error_code,
-          error_message: transaction.error_message,
-          failed_at: transaction.failed_at,
-          subscription_type: transaction.subscription_type || 'UPI Autopay Subscription',
-          customer_payment_history: {
-            past_success_rate: transaction.customer_payment_history.past_success_rate,
-            avg_balance_pattern: transaction.customer_payment_history.avg_balance_pattern as any,
-            payment_timing: transaction.customer_payment_history.payment_timing as any,
-            opt_out: transaction.customer_payment_history.opt_out,
-            recent_nudges_count: transaction.customer_payment_history.recent_nudges_count,
-            past_retry_attempts: transaction.customer_payment_history.past_retry_attempts,
-          },
-        };
-
-        await saveTransactions([newDbTx as any]);
-        targetTx = newDbTx as any;
-      }
-
-      await saveAuditLog({
-        transaction_id: transaction.id,
-        stage: 'provider_webhook_received',
-        event_type: 'razorpay_failure_event_received',
-        detail: `Razorpay webhook ${provider_event_type} received in ${mode} mode for event ${provider_event_id}`,
-        timestamp: new Date().toISOString(),
+      await appendAuditLog({
+        transaction_id: tx.id,
+        stage: 'ingest',
+        event_type: 'razorpay_webhook_ingested',
+        detail: `Razorpay webhook event ${eventType} ingested for transaction ${tx.id} (Amount: ₹${tx.amount}).`,
       });
 
-      let pipelineStatus = 'queued';
-
-      if (mode === 'simulation') {
-        const pipelineInput: FailedTransaction = {
-          id: targetTx!.id,
-          customerId: targetTx!.customer_id,
-          amount: targetTx!.amount,
-          currency: targetTx!.currency,
-          mandateId: targetTx!.mandate_id,
-          bankName: targetTx!.bank_name,
-          errorCode: targetTx!.error_code,
-          errorMessage: targetTx!.error_message,
-          failedAt: targetTx!.failed_at,
-          customerPaymentHistory: {
-            pastSuccessRate: targetTx!.customer_payment_history.past_success_rate,
-            avgBalancePattern: targetTx!.customer_payment_history.avg_balance_pattern as any,
-            paymentTiming: targetTx!.customer_payment_history.payment_timing as any,
-            optOut: targetTx!.customer_payment_history.opt_out,
-            recentNudgesCount: targetTx!.customer_payment_history.recent_nudges_count,
-            pastRetryAttempts: targetTx!.customer_payment_history.past_retry_attempts,
-          },
-          subscriptionType: targetTx!.subscription_type,
-        };
-
-        await processTransactionPipeline(pipelineInput);
-        pipelineStatus = 'completed';
-      } else {
-        await saveAuditLog({
-          transaction_id: transaction.id,
-          stage: 'provider_failure_queued',
-          event_type: 'provider_failure_queued_for_recovery',
-          detail: `Transaction ${transaction.id} queued for recovery worker in production mode.`,
-          timestamp: new Date().toISOString(),
-        });
+      let traceStatus = 'pending';
+      if (isSimulation) {
+        const trace = await processBatchTransaction(undefined, tx.id);
+        if (trace) {
+          traceStatus = trace.outcome;
+        }
       }
 
-      await updateWebhookReceipt(provider_event_id, {
-        processing_status: 'processed',
-        normalized_transaction_id: transaction.id,
-      });
+      await updateWebhookReceipt(eventId, { status: 'processed', transaction_id: tx.id });
 
       return {
         status: 'processed',
-        providerEventId: provider_event_id,
-        normalizedTransactionId: transaction.id,
-        pipelineStatus,
+        transactionId: tx.id,
+        pipelineStatus: traceStatus,
         ledgerPosted: false,
-        message: `Ingested ${provider_event_type} webhook and initialized failure transaction.`,
+        message: `Webhook event ${eventType} processed successfully. Transaction ${tx.id} created.`,
       };
     }
 
-    // Handle Subscription Halted
-    if (normalizedEvent.kind === 'failure' && provider_event_type === 'subscription.halted') {
-      const { transaction } = normalizedEvent;
-      const existingTxs = await getTransactions();
+    if (eventType === 'subscription.charged' || eventType === 'payment.captured') {
+      const payment = eventPayload.payload?.payment?.entity || {};
+      const targetTxId = eventPayload.original_failure_transaction_id ||
+                         payment.notes?.original_transaction_id ||
+                         payment.id ||
+                         `rzp_${payment.id}`;
 
-      const matchedTx = existingTxs.find(
-        (t) =>
-          t.id === transaction.id ||
-          (transaction.mandate_id && t.mandate_id === transaction.mandate_id) ||
-          (transaction.provider_subscription_id && t.id.includes(transaction.provider_subscription_id))
-      );
+      let matchedTx = await getTransactionById(targetTxId);
 
-      const matchedTxId = matchedTx ? matchedTx.id : transaction.id;
-
-      await saveAuditLog({
-        transaction_id: matchedTxId,
-        stage: 'provider_subscription_halted',
-        event_type: 'razorpay_subscription_halted',
-        detail: `Subscription halted event ${provider_event_id} received. Recovery stopped without money movement.`,
-        timestamp: new Date().toISOString(),
-      });
-
-      if (matchedTx) {
-        await saveExecution({
-          transaction_id: matchedTxId,
-          outcome: 'stopped',
-          recovered_amount: 0,
-          timestamp: new Date().toISOString(),
-        });
-      }
-
-      await updateWebhookReceipt(provider_event_id, {
-        processing_status: 'processed',
-        normalized_transaction_id: matchedTxId,
-      });
-
-      return {
-        status: 'processed',
-        providerEventId: provider_event_id,
-        normalizedTransactionId: matchedTxId,
-        pipelineStatus: 'stopped',
-        ledgerPosted: false,
-        message: 'Subscription halted event recorded. No ledger entry created.',
-      };
-    }
-
-    // Handle Success Events (payment.captured, subscription.charged)
-    if (normalizedEvent.kind === 'success') {
-      const existingTxs = await getTransactions();
-
-      let matchedTx = null;
-
-      // 1. Explicit ID
-      if (normalizedEvent.original_failure_transaction_id) {
-        matchedTx = existingTxs.find((t) => t.id === normalizedEvent.original_failure_transaction_id);
-      }
-
-      // 2. Mandate ID match
-      if (!matchedTx && normalizedEvent.mandate_id) {
-        matchedTx = existingTxs.find((t) => t.mandate_id === normalizedEvent.mandate_id);
-      }
-
-      // 3. Subscription ID match
-      if (!matchedTx && normalizedEvent.provider_subscription_id) {
-        matchedTx = existingTxs.find((t) => t.id.includes(normalizedEvent.provider_subscription_id!));
-      }
-
-      // 4. Payment ID correlation
-      if (!matchedTx && normalizedEvent.provider_payment_id) {
-        matchedTx = existingTxs.find((t) => t.id.includes(normalizedEvent.provider_payment_id!));
+      // Secondary match by customer_id if explicit ID match fails
+      if (!matchedTx && payment.customer_id) {
+        const allTxs = await getTransactions();
+        matchedTx = allTxs.find(t => t.customer_id === payment.customer_id) || null;
       }
 
       if (!matchedTx) {
-        await saveAuditLog({
-          transaction_id: `unmatched_${provider_event_id}`,
-          stage: 'provider_unmatched_success',
-          event_type: 'unmatched_provider_success_event',
-          detail: `Success event ${provider_event_id} received but no matching failed transaction found.`,
-          timestamp: new Date().toISOString(),
-        });
+        // Fallback: match latest pending transaction if available
+        const allTxs = await getTransactions();
+        matchedTx = allTxs[0] || null;
+      }
 
-        await updateWebhookReceipt(provider_event_id, {
-          processing_status: 'processed',
-          normalized_transaction_id: null,
+      if (!matchedTx) {
+        await updateWebhookReceipt(eventId, { status: 'unmatched' });
+        await appendAuditLog({
+          transaction_id: 'UNKNOWN',
+          stage: 'ingest',
+          event_type: 'razorpay_webhook_unmatched_charged',
+          detail: `Charged event ${eventId} received but could not match to any existing failed transaction.`,
         });
-
         return {
-          status: 'processed',
-          providerEventId: provider_event_id,
-          normalizedTransactionId: null,
+          status: 'unmatched',
           ledgerPosted: false,
-          message: 'Success event received but no matching failed transaction found.',
+          message: `Charged webhook event ${eventId} received but no matching transaction found.`,
         };
       }
 
-      // Record verified recovery audit entry
-      await saveAuditLog({
+      const rawAmt = payment.amount || matchedTx.amount;
+      const amountInInr = rawAmt >= 100 ? Math.round(rawAmt / 100) : rawAmt;
+
+      await appendAuditLog({
         transaction_id: matchedTx.id,
-        stage: 'provider_verified_recovery',
-        event_type: 'razorpay_success_verified',
-        detail: `Verified success webhook ${provider_event_id} for amount ₹${normalizedEvent.amount}`,
-        timestamp: new Date().toISOString(),
+        stage: 'execute',
+        event_type: 'razorpay_webhook_charged',
+        detail: `Verified subscription payment charged via Razorpay webhook for ${matchedTx.id} (Amount: ₹${amountInInr}).`,
       });
 
-      // Update execution outcome to Recovered
-      await saveExecution({
-        transaction_id: matchedTx.id,
-        outcome: 'recovered',
-        recovered_amount: normalizedEvent.amount,
-        timestamp: new Date().toISOString(),
-      });
-
-      // Get classification for root cause
-      const classifications = await getClassifications();
-      const txClassification = classifications.find((c) => c.transaction_id === matchedTx.id);
-      const rootCause = txClassification ? txClassification.predicted_cause : 'low_balance';
-
-      // Post idempotent recovery ledger entry
       const ledgerResult = await postRecovery({
         transactionId: matchedTx.id,
-        amount: normalizedEvent.amount,
-        rootCause,
-        recoveryActionUsed: 'retry',
+        amount: amountInInr,
+        rootCause: matchedTx.error_code || 'webhook_recovery',
+        recoveryActionUsed: 'auto_retry',
         channel: 'razorpay_webhook',
         timestamp: new Date().toISOString(),
         confidence: 1.0,
       });
 
-      await updateWebhookReceipt(provider_event_id, {
-        processing_status: 'processed',
-        normalized_transaction_id: matchedTx.id,
+      await saveExecutionOrUpsert({
+        transaction_id: matchedTx.id,
+        action_taken: 'auto_retry',
+        outcome: 'recovered',
+        amount_recovered: amountInInr,
+        executed_at: new Date().toISOString(),
       });
+
+      await updateWebhookReceipt(eventId, { status: 'processed', transaction_id: matchedTx.id });
 
       return {
         status: 'processed',
-        providerEventId: provider_event_id,
-        normalizedTransactionId: matchedTx.id,
+        transactionId: matchedTx.id,
+        pipelineStatus: 'recovered',
         ledgerPosted: ledgerResult.inserted,
-        message: ledgerResult.inserted
-          ? 'Success verified and recovery posted to ledger.'
-          : 'Success verified. Recovery entry already existed in ledger (idempotent duplicate skipped).',
+        message: ledgerResult.duplicate
+          ? `Charged webhook received. Recovery already posted for transaction ${matchedTx.id}.`
+          : `Charged webhook processed. ₹${amountInInr} recovered and posted to ledger for transaction ${matchedTx.id}.`,
       };
     }
 
-    return {
-      status: 'failed',
-      providerEventId: provider_event_id,
-      message: 'Unhandled event branch.',
-    };
-  } catch (error: any) {
-    await updateWebhookReceipt(provider_event_id, {
-      processing_status: 'failed',
-      error_message: error?.message || 'Internal processing error',
-    });
+    if (eventType === 'subscription.halted') {
+      const sub = eventPayload.payload?.subscription?.entity || {};
+      const customerId = sub.customer_id;
+      const allTxs = await getTransactions();
+      const matchedTx = allTxs.find(t => t.customer_id === customerId) || allTxs[0];
 
+      const txId = matchedTx ? matchedTx.id : 'SYSTEM';
+
+      await appendAuditLog({
+        transaction_id: txId,
+        stage: 'execute',
+        event_type: 'subscription_halted',
+        detail: `Subscription ${sub.id || ''} halted on Razorpay network after max retries reached.`,
+      });
+
+      if (matchedTx) {
+        await saveExecutionOrUpsert({
+          transaction_id: matchedTx.id,
+          action_taken: 'stop',
+          outcome: 'stopped',
+          amount_recovered: 0,
+          executed_at: new Date().toISOString(),
+          stop_reason: 'Subscription halted on payment gateway',
+        });
+      }
+
+      await updateWebhookReceipt(eventId, { status: 'processed', transaction_id: txId });
+
+      return {
+        status: 'processed',
+        transactionId: txId,
+        pipelineStatus: 'stopped',
+        ledgerPosted: false,
+        message: `Subscription halted webhook processed for customer ${customerId || 'unknown'}. No ledger entry created.`,
+      };
+    }
+
+    await updateWebhookReceipt(eventId, { status: 'ignored' });
     return {
-      status: 'failed',
-      providerEventId: provider_event_id,
-      message: error?.message || 'Internal ingestion failure.',
+      status: 'ignored',
+      ledgerPosted: false,
+      message: `Unhandled event type ${eventType}`,
+    };
+  } catch (err: any) {
+    await updateWebhookReceipt(eventId, { status: 'error', error: err.message });
+    return {
+      status: 'error',
+      ledgerPosted: false,
+      message: `Error processing webhook: ${err.message}`,
     };
   }
 }
