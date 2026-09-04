@@ -121,73 +121,78 @@ function SummaryModal({ metrics, liveMetrics, onClose }: {
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-md animate-fade-in" onClick={onClose} />
       
-      {/* Modal */}
-      <div className="relative z-10 w-full max-w-lg mx-4 rounded-2xl border border-emerald-500/30 bg-[#0a0f1a] shadow-2xl shadow-emerald-500/10 animate-fade-in">
+      {/* Modal Card */}
+      <div className="relative z-10 w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl shadow-cyan-950/40 backdrop-blur-xl animate-fade-in overflow-hidden ring-1 ring-white/10">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-800">
+        <div className="flex items-center justify-between p-5 border-b border-zinc-800/80 bg-zinc-900/50">
           <div className="flex items-center space-x-3">
-            <div className="h-10 w-10 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center">
-              <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+            <div className="h-10 w-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-md shadow-emerald-500/10">
+              <CheckCircle2 className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white font-display">Batch Complete</h2>
-              <p className="text-xs text-slate-400">Recovery pipeline executed successfully</p>
+              <h2 className="text-lg font-bold text-white font-display tracking-tight">Batch Complete</h2>
+              <p className="text-xs text-zinc-400 font-mono">Recovery pipeline executed successfully</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">
-            <X className="h-5 w-5" />
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+          >
+            <X className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Metrics grid */}
+        {/* Content */}
         <div className="p-6 space-y-5">
           {/* Hero metric */}
-          <div className="rounded-xl bg-emerald-500/[0.06] border border-emerald-500/20 p-4 text-center">
-            <p className="text-xs uppercase tracking-widest text-emerald-400 font-mono mb-1">Total Recovered</p>
-            <p className="text-4xl font-extrabold text-emerald-400 tabular-nums">{formatCurrency(metrics?.totalRecovered || 0)}</p>
-            <p className="text-sm text-slate-400 mt-1">
-              {((metrics?.totalRecovered || 0) / (metrics?.totalAtRisk || 1) * 100).toFixed(1)}% of {formatCurrency(metrics?.totalAtRisk || 0)} at risk
+          <div className="rounded-xl bg-gradient-to-br from-emerald-950/40 via-zinc-900/60 to-cyan-950/30 border border-emerald-500/30 p-5 text-center shadow-lg">
+            <p className="text-[10px] uppercase tracking-widest text-emerald-400 font-mono font-bold mb-1">Total Recovered Revenue</p>
+            <p className="text-4xl font-extrabold text-emerald-400 tabular-nums font-display tracking-tight drop-shadow-[0_0_12px_rgba(16,185,129,0.25)]">
+              {formatCurrency(metrics?.totalRecovered || 0)}
+            </p>
+            <p className="text-xs text-zinc-400 font-medium mt-1.5">
+              <span className="text-cyan-400 font-bold font-mono">{((metrics?.totalRecovered || 0) / (metrics?.totalAtRisk || 1) * 100).toFixed(1)}%</span> of {formatCurrency(metrics?.totalAtRisk || 0)} total at risk
             </p>
           </div>
 
           {/* Counter grid */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.04] p-3">
-              <p className="text-[10px] uppercase tracking-wider text-emerald-400 font-mono">Recovered</p>
-              <p className="text-2xl font-bold text-emerald-400 tabular-nums mt-0.5">{liveMetrics.recovered}</p>
-              <p className="text-[10px] text-slate-500 mt-0.5">mandates saved</p>
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] p-3.5">
+              <p className="text-[10px] uppercase tracking-wider text-emerald-400 font-mono font-bold">Recovered</p>
+              <p className="text-2xl font-extrabold text-emerald-400 font-display tabular-nums mt-1">{liveMetrics.recovered}</p>
+              <p className="text-[10px] text-zinc-500 font-mono mt-0.5">mandates saved</p>
             </div>
-            <div className="rounded-lg border border-rose-500/20 bg-rose-500/[0.04] p-3">
-              <p className="text-[10px] uppercase tracking-wider text-rose-400 font-mono">Still Failed</p>
-              <p className="text-2xl font-bold text-rose-400 tabular-nums mt-0.5">{liveMetrics.failed}</p>
-              <p className="text-[10px] text-slate-500 mt-0.5">need manual review</p>
+            <div className="rounded-xl border border-rose-500/20 bg-rose-500/[0.04] p-3.5">
+              <p className="text-[10px] uppercase tracking-wider text-rose-400 font-mono font-bold">Still Failed</p>
+              <p className="text-2xl font-extrabold text-rose-400 font-display tabular-nums mt-1">{liveMetrics.failed}</p>
+              <p className="text-[10px] text-zinc-500 font-mono mt-0.5">need manual review</p>
             </div>
-            <div className="rounded-lg border border-orange-500/20 bg-orange-500/[0.04] p-3">
-              <p className="text-[10px] uppercase tracking-wider text-orange-400 font-mono">Stopped by Guardrails</p>
-              <p className="text-2xl font-bold text-orange-400 tabular-nums mt-0.5">{liveMetrics.stopped}</p>
-              <p className="text-[10px] text-slate-500 mt-0.5">compliance enforced</p>
+            <div className="rounded-xl border border-orange-500/20 bg-orange-500/[0.04] p-3.5">
+              <p className="text-[10px] uppercase tracking-wider text-orange-400 font-mono font-bold">Stopped by Guardrails</p>
+              <p className="text-2xl font-extrabold text-orange-400 font-display tabular-nums mt-1">{liveMetrics.stopped}</p>
+              <p className="text-[10px] text-zinc-500 font-mono mt-0.5">compliance enforced</p>
             </div>
-            <div className="rounded-lg border border-amber-500/20 bg-amber-500/[0.04] p-3">
-              <p className="text-[10px] uppercase tracking-wider text-amber-400 font-mono">Nudges Blocked</p>
-              <p className="text-2xl font-bold text-amber-400 tabular-nums mt-0.5">{liveMetrics.nudgesBlocked}</p>
-              <p className="text-[10px] text-slate-500 mt-0.5">guardrail interventions</p>
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.04] p-3.5">
+              <p className="text-[10px] uppercase tracking-wider text-amber-400 font-mono font-bold">Nudges Blocked</p>
+              <p className="text-2xl font-extrabold text-amber-400 font-display tabular-nums mt-1">{liveMetrics.nudgesBlocked}</p>
+              <p className="text-[10px] text-zinc-500 font-mono mt-0.5">guardrail interventions</p>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3">
+          <div className="flex gap-3 pt-1">
             <button
               onClick={onClose}
-              className="flex-1 py-2.5 rounded-lg border border-slate-700 text-sm text-slate-300 hover:bg-slate-800 transition-colors"
+              className="flex-1 py-2.5 px-4 rounded-xl border border-zinc-700 bg-zinc-900 text-sm font-semibold text-zinc-300 hover:bg-zinc-800 hover:text-white transition-all"
             >
               Close
             </button>
-            <Link href="/transactions" className="flex-1">
-              <button className="w-full py-2.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-sm text-cyan-400 hover:bg-cyan-500/20 transition-colors flex items-center justify-center space-x-1.5">
+            <Link href="/transactions" className="flex-1" onClick={onClose}>
+              <button className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500 text-sm font-bold text-white shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/35 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center space-x-2">
                 <span>Browse Audit Trails</span>
                 <ArrowRight className="h-4 w-4" />
               </button>
@@ -547,7 +552,10 @@ export default function Dashboard() {
             },
             metrics: overviewData || prev.metrics,
           }));
-          setShowSummaryModal(true);
+          const alreadyDismissed = sessionStorage.getItem(`dismissed_summary_${batchId}`);
+          if (!alreadyDismissed) {
+            setShowSummaryModal(true);
+          }
         } else if (data.status === 'paused' || data.status === 'failed') {
           stopPolling();
           localStorage.removeItem('activeBatchId');
@@ -773,32 +781,70 @@ export default function Dashboard() {
         <SummaryModal
           metrics={metrics}
           liveMetrics={liveMetrics}
-          onClose={() => setShowSummaryModal(false)}
+          onClose={() => {
+            if (batchStatus.id) {
+              sessionStorage.setItem(`dismissed_summary_${batchStatus.id}`, 'true');
+            }
+            setShowSummaryModal(false);
+          }}
         />
       )}
 
       {/* Reset confirmation dialog */}
       {showResetDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => !isResetting && setShowResetDialog(false)} />
-          <div className="relative z-10 w-full max-w-lg mx-4 rounded-2xl border border-rose-500/30 bg-[#0a0f1a] shadow-2xl shadow-rose-500/10 p-6 animate-fade-in">
-            <h2 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
-              <ShieldAlert className="text-rose-500" />
-              Reset & Generate Fresh Data
-            </h2>
-            <p className="text-sm text-slate-300 mb-6 leading-relaxed">
-              This will wipe the current database, create a backup, and generate 300 fresh synthetic failure records. Any running batch processes will be safely halted.
-              <br /><br />
-              <strong className="text-rose-400">Warning:</strong> This is a sandbox feature. Are you sure you want to proceed?
-            </p>
-            <div className="flex gap-3 justify-end">
-              <Button variant="outline" disabled={isResetting} onClick={() => setShowResetDialog(false)}>
-                Cancel
-              </Button>
-              <Button className="bg-rose-600 hover:bg-rose-700 text-white" disabled={isResetting} onClick={handleResetDataset}>
-                {isResetting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                {isResetting ? 'Resetting...' : 'Confirm Reset'}
-              </Button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md animate-fade-in" onClick={() => !isResetting && setShowResetDialog(false)} />
+          <div className="relative z-10 w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl shadow-rose-950/40 backdrop-blur-xl animate-fade-in overflow-hidden ring-1 ring-white/10">
+            {/* Header */}
+            <div className="flex items-center justify-between p-5 border-b border-zinc-800/80 bg-zinc-900/50">
+              <div className="flex items-center space-x-3">
+                <div className="h-10 w-10 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 shadow-md shadow-rose-500/10">
+                  <ShieldAlert className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white font-display tracking-tight">Reset & Generate Fresh Data</h2>
+                  <p className="text-xs text-zinc-400 font-mono">Sandbox dataset management</p>
+                </div>
+              </div>
+              <button
+                onClick={() => !isResetting && setShowResetDialog(false)}
+                className="rounded-lg p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+                disabled={isResetting}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-5">
+              <p className="text-sm text-zinc-300 leading-relaxed font-sans">
+                This action will wipe the current transaction database, create a timestamped JSON backup, and generate <strong className="text-white font-mono font-bold">300 fresh synthetic failure records</strong>. Any active recovery batches will be safely halted.
+              </p>
+              <div className="rounded-xl border border-rose-500/20 bg-rose-500/[0.05] p-3.5 flex items-start space-x-3">
+                <AlertTriangle className="h-5 w-5 text-rose-400 shrink-0 mt-0.5" />
+                <p className="text-xs text-rose-300 font-medium leading-normal">
+                  <strong className="font-bold">Warning:</strong> All ledger entries and active pipeline history will be reset. Are you sure you want to proceed?
+                </p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 justify-end pt-1">
+                <button
+                  disabled={isResetting}
+                  onClick={() => setShowResetDialog(false)}
+                  className="py-2.5 px-4 rounded-xl border border-zinc-700 bg-zinc-900 text-sm font-semibold text-zinc-300 hover:bg-zinc-800 hover:text-white disabled:opacity-50 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={isResetting}
+                  onClick={handleResetDataset}
+                  className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-rose-600 to-rose-500 text-sm font-bold text-white shadow-lg shadow-rose-500/25 hover:shadow-rose-500/40 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100 transition-all flex items-center space-x-2"
+                >
+                  {isResetting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  <span>{isResetting ? 'Resetting...' : 'Confirm Reset'}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

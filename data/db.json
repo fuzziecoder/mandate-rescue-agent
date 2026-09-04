@@ -12701,6 +12701,90 @@
       "passed": true,
       "detail": "All guardrails passed",
       "id": 440
+    },
+    {
+      "transaction_id": "txn_ds_mtmtxaum_00010",
+      "check_name": "quiet_hours",
+      "passed": true,
+      "detail": "All guardrails passed",
+      "id": 441
+    },
+    {
+      "transaction_id": "txn_ds_mtmtxaum_00166",
+      "check_name": "quiet_hours",
+      "passed": true,
+      "detail": "All guardrails passed",
+      "id": 442
+    },
+    {
+      "transaction_id": "txn_ds_mtmtxaum_00053",
+      "check_name": "quiet_hours",
+      "passed": true,
+      "detail": "All guardrails passed",
+      "id": 443
+    },
+    {
+      "transaction_id": "txn_ds_mtmtxaum_00020",
+      "check_name": "quiet_hours",
+      "passed": true,
+      "detail": "All guardrails passed",
+      "id": 444
+    },
+    {
+      "transaction_id": "txn_ds_mtmtxaum_00123",
+      "check_name": "retry_cap",
+      "passed": true,
+      "detail": "All guardrails passed",
+      "id": 445
+    },
+    {
+      "transaction_id": "txn_ds_mtmtxaum_00287",
+      "check_name": "retry_cap",
+      "passed": true,
+      "detail": "All guardrails passed",
+      "id": 446
+    },
+    {
+      "transaction_id": "txn_ds_mtmtxaum_00262",
+      "check_name": "retry_cap",
+      "passed": true,
+      "detail": "All guardrails passed",
+      "id": 447
+    },
+    {
+      "transaction_id": "txn_ds_mtmtxaum_00101",
+      "check_name": "quiet_hours",
+      "passed": true,
+      "detail": "All guardrails passed",
+      "id": 448
+    },
+    {
+      "transaction_id": "txn_ds_mtmtxaum_00099",
+      "check_name": "quiet_hours",
+      "passed": true,
+      "detail": "All guardrails passed",
+      "id": 449
+    },
+    {
+      "transaction_id": "txn_ds_mtmtxaum_00233",
+      "check_name": "quiet_hours",
+      "passed": true,
+      "detail": "All guardrails passed",
+      "id": 450
+    },
+    {
+      "transaction_id": "txn_ds_mtmtxaum_00281",
+      "check_name": "quiet_hours",
+      "passed": true,
+      "detail": "All guardrails passed",
+      "id": 451
+    },
+    {
+      "transaction_id": "txn_ds_mtmtxaum_00012",
+      "check_name": "quiet_hours",
+      "passed": true,
+      "detail": "All guardrails passed",
+      "id": 452
     }
   ],
   "executions": [
@@ -12791,9 +12875,9 @@
     {
       "transaction_id": "txn_ds_mtmtxaum_00010",
       "action_taken": "schedule_split",
-      "outcome": "pending",
-      "amount_recovered": 0,
-      "executed_at": "2026-09-04T11:10:48.748Z"
+      "outcome": "recovered",
+      "amount_recovered": 1921,
+      "executed_at": "2026-09-04T11:20:03.957Z"
     },
     {
       "transaction_id": "txn_ds_mtmtxaum_00040",
@@ -12954,7 +13038,7 @@
       "action_taken": "schedule_split",
       "outcome": "pending",
       "amount_recovered": 0,
-      "executed_at": "2026-09-04T11:10:51.360Z"
+      "executed_at": "2026-09-04T11:20:06.739Z"
     },
     {
       "transaction_id": "txn_ds_mtmtxaum_00279",
@@ -13031,7 +13115,7 @@
       "action_taken": "reauth",
       "outcome": "pending",
       "amount_recovered": 0,
-      "executed_at": "2026-09-04T11:10:55.072Z"
+      "executed_at": "2026-09-04T11:20:09.607Z"
     },
     {
       "transaction_id": "txn_ds_mtmtxaum_00027",
@@ -13344,9 +13428,9 @@
     {
       "transaction_id": "txn_ds_mtmtxaum_00020",
       "action_taken": "schedule_split",
-      "outcome": "pending",
-      "amount_recovered": 0,
-      "executed_at": "2026-09-04T11:11:07.485Z"
+      "outcome": "recovered",
+      "amount_recovered": 11885,
+      "executed_at": "2026-09-04T11:20:11.186Z"
     },
     {
       "transaction_id": "txn_ds_mtmtxaum_00104",
@@ -13360,7 +13444,7 @@
       "action_taken": "retry",
       "outcome": "pending",
       "amount_recovered": 0,
-      "executed_at": "2026-09-04T11:11:10.379Z"
+      "executed_at": "2026-09-04T11:20:12.685Z"
     },
     {
       "transaction_id": "txn_ds_mtmtxaum_00259",
@@ -13549,7 +13633,7 @@
       "action_taken": "retry",
       "outcome": "pending",
       "amount_recovered": 0,
-      "executed_at": "2026-09-04T11:11:12.528Z"
+      "executed_at": "2026-09-04T11:20:13.974Z"
     },
     {
       "transaction_id": "txn_ds_mtmtxaum_00030",
@@ -13591,7 +13675,7 @@
       "action_taken": "retry",
       "outcome": "pending",
       "amount_recovered": 0,
-      "executed_at": "2026-09-04T11:11:14.479Z"
+      "executed_at": "2026-09-04T11:20:15.635Z"
     },
     {
       "transaction_id": "txn_ds_mtmtxaum_00213",
@@ -13752,7 +13836,7 @@
       "action_taken": "schedule_split",
       "outcome": "pending",
       "amount_recovered": 0,
-      "executed_at": "2026-09-04T11:11:17.161Z"
+      "executed_at": "2026-09-04T11:20:17.254Z"
     },
     {
       "transaction_id": "txn_ds_mtmtxaum_00009",
@@ -13834,9 +13918,9 @@
     {
       "transaction_id": "txn_ds_mtmtxaum_00099",
       "action_taken": "schedule_split",
-      "outcome": "pending",
-      "amount_recovered": 0,
-      "executed_at": "2026-09-04T11:11:19.811Z"
+      "outcome": "recovered",
+      "amount_recovered": 12010,
+      "executed_at": "2026-09-04T11:20:18.590Z"
     },
     {
       "transaction_id": "txn_ds_mtmtxaum_00131",
@@ -14053,7 +14137,7 @@
       "action_taken": "schedule_split",
       "outcome": "pending",
       "amount_recovered": 0,
-      "executed_at": "2026-09-04T11:11:23.669Z"
+      "executed_at": "2026-09-04T11:20:19.880Z"
     },
     {
       "transaction_id": "txn_ds_mtmtxaum_00086",
@@ -14522,7 +14606,7 @@
       "action_taken": "reauth",
       "outcome": "pending",
       "amount_recovered": 0,
-      "executed_at": "2026-09-04T11:11:29.127Z"
+      "executed_at": "2026-09-04T11:20:20.928Z"
     },
     {
       "transaction_id": "txn_ds_mtmtxaum_00205",
@@ -14697,7 +14781,7 @@
       "action_taken": "reauth",
       "outcome": "pending",
       "amount_recovered": 0,
-      "executed_at": "2026-09-04T11:11:31.500Z"
+      "executed_at": "2026-09-04T11:20:22.180Z"
     },
     {
       "transaction_id": "txn_ds_mtmtxaum_00085",
@@ -38768,6 +38852,546 @@
       },
       "created_at": "2026-09-04T11:11:31.558Z",
       "id": 716
+    },
+    {
+      "transaction_id": "txn_ds_mtmtxaum_00010",
+      "stage": "execute",
+      "payload": {
+        "status": "recovered",
+        "steps": [
+          {
+            "stage": "classify",
+            "payload": {
+              "cause": "limit_exceeded",
+              "confidence": 0.95,
+              "reasoning": "Matched known payment-provider error code/rule for limit exceeded."
+            },
+            "timestamp": "2026-09-04T11:20:03.121Z"
+          },
+          {
+            "stage": "decide",
+            "payload": {
+              "action": "schedule_split",
+              "reasoning": "High-ticket limit decline. Splitting transaction into smaller payment targets.",
+              "scheduleDelayHours": 24
+            },
+            "timestamp": "2026-09-04T11:20:03.497Z"
+          },
+          {
+            "stage": "guardrail",
+            "payload": {
+              "allowed": true,
+              "reason": "All guardrails passed"
+            },
+            "timestamp": "2026-09-04T11:20:03.726Z"
+          },
+          {
+            "stage": "execute",
+            "payload": {
+              "outcome": "recovered",
+              "finalAction": "schedule_split"
+            },
+            "timestamp": "2026-09-04T11:20:03.957Z"
+          }
+        ]
+      },
+      "created_at": "2026-09-04T11:20:04.118Z",
+      "id": 717
+    },
+    {
+      "transaction_id": "txn_ds_mtmtxaum_00166",
+      "stage": "execute",
+      "payload": {
+        "status": "pending",
+        "steps": [
+          {
+            "stage": "classify",
+            "payload": {
+              "cause": "limit_exceeded",
+              "confidence": 0.95,
+              "reasoning": "Matched known payment-provider error code/rule for limit exceeded."
+            },
+            "timestamp": "2026-09-04T11:20:04.952Z"
+          },
+          {
+            "stage": "decide",
+            "payload": {
+              "action": "schedule_split",
+              "reasoning": "High-ticket limit decline. Splitting transaction into smaller payment targets.",
+              "scheduleDelayHours": 24
+            },
+            "timestamp": "2026-09-04T11:20:05.197Z"
+          },
+          {
+            "stage": "guardrail",
+            "payload": {
+              "allowed": true,
+              "reason": "All guardrails passed"
+            },
+            "timestamp": "2026-09-04T11:20:06.519Z"
+          },
+          {
+            "stage": "execute",
+            "payload": {
+              "outcome": "pending",
+              "finalAction": "schedule_split"
+            },
+            "timestamp": "2026-09-04T11:20:06.739Z"
+          }
+        ]
+      },
+      "created_at": "2026-09-04T11:20:06.802Z",
+      "id": 718
+    },
+    {
+      "transaction_id": "txn_ds_mtmtxaum_00053",
+      "stage": "execute",
+      "payload": {
+        "status": "pending",
+        "steps": [
+          {
+            "stage": "classify",
+            "payload": {
+              "cause": "mandate_expired",
+              "confidence": 0.95,
+              "reasoning": "Matched known payment-provider error code/rule for mandate expiration/revocation."
+            },
+            "timestamp": "2026-09-04T11:20:08.420Z"
+          },
+          {
+            "stage": "decide",
+            "payload": {
+              "action": "reauth",
+              "reasoning": "Mandate is no longer legally authorized. Redirecting user to complete re-authorization flow.",
+              "scheduleDelayHours": 0
+            },
+            "timestamp": "2026-09-04T11:20:08.600Z"
+          },
+          {
+            "stage": "guardrail",
+            "payload": {
+              "allowed": true,
+              "reason": "All guardrails passed"
+            },
+            "timestamp": "2026-09-04T11:20:09.156Z"
+          },
+          {
+            "stage": "execute",
+            "payload": {
+              "outcome": "pending",
+              "finalAction": "reauth"
+            },
+            "timestamp": "2026-09-04T11:20:09.607Z"
+          }
+        ]
+      },
+      "created_at": "2026-09-04T11:20:09.646Z",
+      "id": 719
+    },
+    {
+      "transaction_id": "txn_ds_mtmtxaum_00020",
+      "stage": "execute",
+      "payload": {
+        "status": "recovered",
+        "steps": [
+          {
+            "stage": "classify",
+            "payload": {
+              "cause": "limit_exceeded",
+              "confidence": 0.95,
+              "reasoning": "Matched known payment-provider error code/rule for limit exceeded."
+            },
+            "timestamp": "2026-09-04T11:20:10.331Z"
+          },
+          {
+            "stage": "decide",
+            "payload": {
+              "action": "schedule_split",
+              "reasoning": "High-ticket limit decline. Splitting transaction into smaller payment targets.",
+              "scheduleDelayHours": 24
+            },
+            "timestamp": "2026-09-04T11:20:10.723Z"
+          },
+          {
+            "stage": "guardrail",
+            "payload": {
+              "allowed": true,
+              "reason": "All guardrails passed"
+            },
+            "timestamp": "2026-09-04T11:20:11.043Z"
+          },
+          {
+            "stage": "execute",
+            "payload": {
+              "outcome": "recovered",
+              "finalAction": "schedule_split"
+            },
+            "timestamp": "2026-09-04T11:20:11.186Z"
+          }
+        ]
+      },
+      "created_at": "2026-09-04T11:20:11.261Z",
+      "id": 720
+    },
+    {
+      "transaction_id": "txn_ds_mtmtxaum_00123",
+      "stage": "execute",
+      "payload": {
+        "status": "pending",
+        "steps": [
+          {
+            "stage": "classify",
+            "payload": {
+              "cause": "low_balance",
+              "confidence": 0.95,
+              "reasoning": "Matched known payment-provider error code/rule for low balance."
+            },
+            "timestamp": "2026-09-04T11:20:11.913Z"
+          },
+          {
+            "stage": "decide",
+            "payload": {
+              "action": "retry",
+              "reasoning": "Unreliable account history (success rate 22%). Scheduling retry in 3 days (salary window).",
+              "scheduleDelayHours": 72
+            },
+            "timestamp": "2026-09-04T11:20:12.337Z"
+          },
+          {
+            "stage": "guardrail",
+            "payload": {
+              "allowed": true,
+              "reason": "All guardrails passed"
+            },
+            "timestamp": "2026-09-04T11:20:12.525Z"
+          },
+          {
+            "stage": "execute",
+            "payload": {
+              "outcome": "pending",
+              "finalAction": "retry"
+            },
+            "timestamp": "2026-09-04T11:20:12.685Z"
+          }
+        ]
+      },
+      "created_at": "2026-09-04T11:20:12.717Z",
+      "id": 721
+    },
+    {
+      "transaction_id": "txn_ds_mtmtxaum_00287",
+      "stage": "execute",
+      "payload": {
+        "status": "pending",
+        "steps": [
+          {
+            "stage": "classify",
+            "payload": {
+              "cause": "low_balance",
+              "confidence": 0.95,
+              "reasoning": "Matched known payment-provider error code/rule for low balance."
+            },
+            "timestamp": "2026-09-04T11:20:13.412Z"
+          },
+          {
+            "stage": "decide",
+            "payload": {
+              "action": "retry",
+              "reasoning": "Unreliable account history (success rate 44%). Scheduling retry in 3 days (salary window).",
+              "scheduleDelayHours": 72
+            },
+            "timestamp": "2026-09-04T11:20:13.582Z"
+          },
+          {
+            "stage": "guardrail",
+            "payload": {
+              "allowed": true,
+              "reason": "All guardrails passed"
+            },
+            "timestamp": "2026-09-04T11:20:13.807Z"
+          },
+          {
+            "stage": "execute",
+            "payload": {
+              "outcome": "pending",
+              "finalAction": "retry"
+            },
+            "timestamp": "2026-09-04T11:20:13.974Z"
+          }
+        ]
+      },
+      "created_at": "2026-09-04T11:20:14.021Z",
+      "id": 722
+    },
+    {
+      "transaction_id": "txn_ds_mtmtxaum_00262",
+      "stage": "execute",
+      "payload": {
+        "status": "pending",
+        "steps": [
+          {
+            "stage": "classify",
+            "payload": {
+              "cause": "low_balance",
+              "confidence": 0.95,
+              "reasoning": "Matched known payment-provider error code/rule for low balance."
+            },
+            "timestamp": "2026-09-04T11:20:14.889Z"
+          },
+          {
+            "stage": "decide",
+            "payload": {
+              "action": "retry",
+              "reasoning": "Unreliable account history (success rate 33%). Scheduling retry in 3 days (salary window).",
+              "scheduleDelayHours": 72
+            },
+            "timestamp": "2026-09-04T11:20:15.268Z"
+          },
+          {
+            "stage": "guardrail",
+            "payload": {
+              "allowed": true,
+              "reason": "All guardrails passed"
+            },
+            "timestamp": "2026-09-04T11:20:15.475Z"
+          },
+          {
+            "stage": "execute",
+            "payload": {
+              "outcome": "pending",
+              "finalAction": "retry"
+            },
+            "timestamp": "2026-09-04T11:20:15.635Z"
+          }
+        ]
+      },
+      "created_at": "2026-09-04T11:20:15.675Z",
+      "id": 723
+    },
+    {
+      "transaction_id": "txn_ds_mtmtxaum_00101",
+      "stage": "execute",
+      "payload": {
+        "status": "pending",
+        "steps": [
+          {
+            "stage": "classify",
+            "payload": {
+              "cause": "limit_exceeded",
+              "confidence": 0.95,
+              "reasoning": "Matched known payment-provider error code/rule for limit exceeded."
+            },
+            "timestamp": "2026-09-04T11:20:16.499Z"
+          },
+          {
+            "stage": "decide",
+            "payload": {
+              "action": "schedule_split",
+              "reasoning": "High-ticket limit decline. Splitting transaction into smaller payment targets.",
+              "scheduleDelayHours": 24
+            },
+            "timestamp": "2026-09-04T11:20:16.655Z"
+          },
+          {
+            "stage": "guardrail",
+            "payload": {
+              "allowed": true,
+              "reason": "All guardrails passed"
+            },
+            "timestamp": "2026-09-04T11:20:16.862Z"
+          },
+          {
+            "stage": "execute",
+            "payload": {
+              "outcome": "pending",
+              "finalAction": "schedule_split"
+            },
+            "timestamp": "2026-09-04T11:20:17.254Z"
+          }
+        ]
+      },
+      "created_at": "2026-09-04T11:20:17.303Z",
+      "id": 724
+    },
+    {
+      "transaction_id": "txn_ds_mtmtxaum_00099",
+      "stage": "execute",
+      "payload": {
+        "status": "recovered",
+        "steps": [
+          {
+            "stage": "classify",
+            "payload": {
+              "cause": "limit_exceeded",
+              "confidence": 0.95,
+              "reasoning": "Matched known payment-provider error code/rule for limit exceeded."
+            },
+            "timestamp": "2026-09-04T11:20:17.914Z"
+          },
+          {
+            "stage": "decide",
+            "payload": {
+              "action": "schedule_split",
+              "reasoning": "High-ticket limit decline. Splitting transaction into smaller payment targets.",
+              "scheduleDelayHours": 24
+            },
+            "timestamp": "2026-09-04T11:20:18.270Z"
+          },
+          {
+            "stage": "guardrail",
+            "payload": {
+              "allowed": true,
+              "reason": "All guardrails passed"
+            },
+            "timestamp": "2026-09-04T11:20:18.431Z"
+          },
+          {
+            "stage": "execute",
+            "payload": {
+              "outcome": "recovered",
+              "finalAction": "schedule_split"
+            },
+            "timestamp": "2026-09-04T11:20:18.590Z"
+          }
+        ]
+      },
+      "created_at": "2026-09-04T11:20:18.664Z",
+      "id": 725
+    },
+    {
+      "transaction_id": "txn_ds_mtmtxaum_00233",
+      "stage": "execute",
+      "payload": {
+        "status": "pending",
+        "steps": [
+          {
+            "stage": "classify",
+            "payload": {
+              "cause": "limit_exceeded",
+              "confidence": 0.95,
+              "reasoning": "Matched known payment-provider error code/rule for limit exceeded."
+            },
+            "timestamp": "2026-09-04T11:20:19.400Z"
+          },
+          {
+            "stage": "decide",
+            "payload": {
+              "action": "schedule_split",
+              "reasoning": "High-ticket limit decline. Splitting transaction into smaller payment targets.",
+              "scheduleDelayHours": 24
+            },
+            "timestamp": "2026-09-04T11:20:19.566Z"
+          },
+          {
+            "stage": "guardrail",
+            "payload": {
+              "allowed": true,
+              "reason": "All guardrails passed"
+            },
+            "timestamp": "2026-09-04T11:20:19.736Z"
+          },
+          {
+            "stage": "execute",
+            "payload": {
+              "outcome": "pending",
+              "finalAction": "schedule_split"
+            },
+            "timestamp": "2026-09-04T11:20:19.880Z"
+          }
+        ]
+      },
+      "created_at": "2026-09-04T11:20:19.909Z",
+      "id": 726
+    },
+    {
+      "transaction_id": "txn_ds_mtmtxaum_00281",
+      "stage": "execute",
+      "payload": {
+        "status": "pending",
+        "steps": [
+          {
+            "stage": "classify",
+            "payload": {
+              "cause": "mandate_expired",
+              "confidence": 0.95,
+              "reasoning": "Matched known payment-provider error code/rule for mandate expiration/revocation."
+            },
+            "timestamp": "2026-09-04T11:20:20.481Z"
+          },
+          {
+            "stage": "decide",
+            "payload": {
+              "action": "reauth",
+              "reasoning": "Mandate is no longer legally authorized. Redirecting user to complete re-authorization flow.",
+              "scheduleDelayHours": 0
+            },
+            "timestamp": "2026-09-04T11:20:20.622Z"
+          },
+          {
+            "stage": "guardrail",
+            "payload": {
+              "allowed": true,
+              "reason": "All guardrails passed"
+            },
+            "timestamp": "2026-09-04T11:20:20.778Z"
+          },
+          {
+            "stage": "execute",
+            "payload": {
+              "outcome": "pending",
+              "finalAction": "reauth"
+            },
+            "timestamp": "2026-09-04T11:20:20.928Z"
+          }
+        ]
+      },
+      "created_at": "2026-09-04T11:20:20.961Z",
+      "id": 727
+    },
+    {
+      "transaction_id": "txn_ds_mtmtxaum_00012",
+      "stage": "execute",
+      "payload": {
+        "status": "pending",
+        "steps": [
+          {
+            "stage": "classify",
+            "payload": {
+              "cause": "mandate_expired",
+              "confidence": 0.95,
+              "reasoning": "Matched known payment-provider error code/rule for mandate expiration/revocation."
+            },
+            "timestamp": "2026-09-04T11:20:21.541Z"
+          },
+          {
+            "stage": "decide",
+            "payload": {
+              "action": "reauth",
+              "reasoning": "Mandate is no longer legally authorized. Redirecting user to complete re-authorization flow.",
+              "scheduleDelayHours": 0
+            },
+            "timestamp": "2026-09-04T11:20:21.681Z"
+          },
+          {
+            "stage": "guardrail",
+            "payload": {
+              "allowed": true,
+              "reason": "All guardrails passed"
+            },
+            "timestamp": "2026-09-04T11:20:21.858Z"
+          },
+          {
+            "stage": "execute",
+            "payload": {
+              "outcome": "pending",
+              "finalAction": "reauth"
+            },
+            "timestamp": "2026-09-04T11:20:22.180Z"
+          }
+        ]
+      },
+      "created_at": "2026-09-04T11:20:22.212Z",
+      "id": 728
     }
   ],
   "promises": [],
@@ -42299,6 +42923,60 @@
       "source": "pipeline_executor",
       "status": "recovered",
       "confidence": 0.95
+    },
+    {
+      "id": "LDG-OYAJN2PUL",
+      "transaction_id": "txn_ds_mtmtxaum_00010",
+      "idempotency_key": "recovery:txn_ds_mtmtxaum_00010",
+      "amount": 1921,
+      "currency": "INR",
+      "root_cause": "limit_exceeded",
+      "failure_cause": "limit_exceeded",
+      "recovery_action_used": "schedule_split",
+      "recovery_action": "schedule_split",
+      "channel": "unknown",
+      "provider_event_id": null,
+      "posted_at": "2026-09-04T11:20:04.034Z",
+      "timestamp": "2026-09-04T11:20:04.034Z",
+      "source": "pipeline_executor",
+      "status": "recovered",
+      "confidence": 0.95
+    },
+    {
+      "id": "LDG-VLQHKIMGK",
+      "transaction_id": "txn_ds_mtmtxaum_00020",
+      "idempotency_key": "recovery:txn_ds_mtmtxaum_00020",
+      "amount": 11885,
+      "currency": "INR",
+      "root_cause": "limit_exceeded",
+      "failure_cause": "limit_exceeded",
+      "recovery_action_used": "schedule_split",
+      "recovery_action": "schedule_split",
+      "channel": "unknown",
+      "provider_event_id": null,
+      "posted_at": "2026-09-04T11:20:11.226Z",
+      "timestamp": "2026-09-04T11:20:11.226Z",
+      "source": "pipeline_executor",
+      "status": "recovered",
+      "confidence": 0.95
+    },
+    {
+      "id": "LDG-9Z49J1EUJ",
+      "transaction_id": "txn_ds_mtmtxaum_00099",
+      "idempotency_key": "recovery:txn_ds_mtmtxaum_00099",
+      "amount": 12010,
+      "currency": "INR",
+      "root_cause": "limit_exceeded",
+      "failure_cause": "limit_exceeded",
+      "recovery_action_used": "schedule_split",
+      "recovery_action": "schedule_split",
+      "channel": "unknown",
+      "provider_event_id": null,
+      "posted_at": "2026-09-04T11:20:18.628Z",
+      "timestamp": "2026-09-04T11:20:18.628Z",
+      "source": "pipeline_executor",
+      "status": "recovered",
+      "confidence": 0.95
     }
   ],
   "webhook_receipts": [],
@@ -42414,6 +43092,34 @@
         "[16:41:29] #um_00012 → Classifying cause for txn_ds_mtmtxaum_00012"
       ],
       "updated_at": "2026-09-04T11:11:32.166Z"
+    },
+    {
+      "id": "batch_1788520802495_c7i5k",
+      "source": "dashboard",
+      "status": "completed",
+      "started_at": "2026-09-04T11:20:02.474Z",
+      "completed_at": "2026-09-04T11:20:22.608Z",
+      "total": 12,
+      "processed": 12,
+      "recovered_count": 199,
+      "stopped_count": 92,
+      "pending_count": 9,
+      "failed_count": 0,
+      "total_at_risk": 63509,
+      "total_recovered": 772798,
+      "error_message": null,
+      "blocked_count": 92,
+      "recovery_rate": 1216.8322599946464,
+      "last_processed_transaction_id": "txn_ds_mtmtxaum_00012",
+      "current_stage": "completed",
+      "recent_events": [
+        "[16:50:22] #um_00012 ✓ Saved (12/12)",
+        "[16:50:21] #um_00012 → Executed: outcome=pending action=reauth",
+        "[16:50:21] #um_00012 → Guardrail: PASSED",
+        "[16:50:21] #um_00012 → Decided recovery action: reauth",
+        "[16:50:21] #um_00012 → Classifying cause for txn_ds_mtmtxaum_00012"
+      ],
+      "updated_at": "2026-09-04T11:20:22.608Z"
     }
   ],
   "settings": {

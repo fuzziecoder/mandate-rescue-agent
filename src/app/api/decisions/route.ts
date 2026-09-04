@@ -48,10 +48,10 @@ export async function GET() {
       const escalation_rung = action_chosen === 'nudge'
         ? 'Rung 1: SMS Nudge'
         : action_chosen === 'retry'
-        ? 'Rung 2: Auto Retry'
-        : action_chosen === 'reauth'
-        ? 'Rung 3: Web Reauth'
-        : 'Rung 0: Stopped';
+          ? 'Rung 2: Auto Retry'
+          : action_chosen === 'reauth'
+            ? 'Rung 3: Web Reauth'
+            : 'Rung 0: Stopped';
 
       const touches_remaining = Math.max(0, 3 - pastAttempts);
       const consent_status = txView.customer_payment_history.opt_out ? 'Opted-Out' : 'Consent Active';
