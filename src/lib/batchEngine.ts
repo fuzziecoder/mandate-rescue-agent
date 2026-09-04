@@ -138,7 +138,7 @@ export async function startBatchRun(options: StartBatchOptions = {}): Promise<St
 
   const delayMs = typeof options.delayMs === 'number'
     ? Math.min(1000, Math.max(0, options.delayMs))
-    : Number(process.env.BATCH_DEMO_DELAY_MS) || 120;
+    : Number(process.env.BATCH_DEMO_DELAY_MS) || 250;
 
   if (settings.dispatch_kill_switch) {
     await appendAuditLog({
@@ -170,22 +170,36 @@ export async function startBatchRun(options: StartBatchOptions = {}): Promise<St
 /**
  * Execute batch loop transaction-by-transaction in background
  */
-export async function runBatchAsync(batchId: string, transactionIds: string[], delayMs: number = 120): Promise<void> {
+export async function runBatchAsync(batchId: string, transactionIds: string[], delayMs: number = 250): Promise<void> {
   if (activeBatchPromises.has(batchId)) {
     return activeBatchPromises.get(batchId)!;
   }
 
   const promise = (async () => {
     try {
-      await updateBatchRun(batchId, { status: 'running' });
+      await updateBatchRun(batchId, { status: 'running', current_stage: 'starting', updated_at: new Date().toISOString() });
       const batch = await getBatchRunById(batchId);
       if (!batch) return;
+      
+      const initialSettings = await getSettings();
+      const initialGenerationVersion = initialSettings.dataset_generation_version || 1;
 
       const startIndex = batch.processed || 0;
+      // Maintained as a ring buffer (last 5 events)
+      const recentEvents: string[] = [];
+
+      const stageDelayMs = Number(process.env.PIPELINE_STAGE_DELAY_MS) || 80;
 
       for (let i = startIndex; i < transactionIds.length; i++) {
         // 1. Read settings before each transaction step
         const settings = await getSettings();
+        
+        // Abort loop if dataset was reset underneath us
+        if ((settings.dataset_generation_version || 1) !== initialGenerationVersion) {
+          console.warn(`[BatchEngine] Dataset generation version changed (Reset detected). Aborting batch loop ${batchId}.`);
+          activeBatchPromises.delete(batchId);
+          return;
+        }
         if (settings.dispatch_kill_switch) {
           console.log(`[BatchEngine] Dispatch kill-switch detected ON. Pausing batch ${batchId} at index ${i}.`);
           await appendAuditLog({
@@ -225,7 +239,28 @@ export async function runBatchAsync(batchId: string, transactionIds: string[], d
           const tx = await getTransactionById(txId);
           if (tx) {
             try {
-              await processTransactionPipeline(tx as unknown as FailedTransaction);
+              // Stage change callback: persists current_stage + recentEvents after every stage
+              const onStageChange = async (stage: string, eventText?: string) => {
+                const ts = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                const txShort = txId.slice(-8);
+                const entry = `[${ts}] #${txShort} → ${eventText || stage}`;
+                recentEvents.unshift(entry);
+                if (recentEvents.length > 5) recentEvents.length = 5;
+
+                await updateBatchRun(batchId, {
+                  current_stage: stage,
+                  recent_events: [...recentEvents],
+                  last_processed_transaction_id: txId,
+                  updated_at: new Date().toISOString(),
+                });
+
+                // Per-stage demo delay (env-controlled)
+                if (stageDelayMs > 0) {
+                  await new Promise(r => setTimeout(r, stageDelayMs));
+                }
+              };
+
+              await processTransactionPipeline(tx as unknown as FailedTransaction, undefined, onStageChange);
             } catch (err: any) {
               console.error(`[BatchEngine] Error processing transaction ${txId}:`, err);
             }
@@ -239,6 +274,15 @@ export async function runBatchAsync(batchId: string, transactionIds: string[], d
 
         const outcomeCounts = calculateOutcomeCounts(executions, allTransactions);
         const totalRecovered = calculateRecoveredRevenue(ledgerEntries);
+        const totalAtRisk = (batch.total_at_risk || 0);
+        const recoveryRate = totalAtRisk > 0 ? (totalRecovered / totalAtRisk) * 100 : 0;
+
+        // Mark 'saved' as current stage after full transaction persisted
+        const ts = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const txShort = txId.slice(-8);
+        const savedEntry = `[${ts}] #${txShort} ✓ Saved (${i + 1}/${transactionIds.length})`;
+        recentEvents.unshift(savedEntry);
+        if (recentEvents.length > 5) recentEvents.length = 5;
 
         await updateBatchRun(batchId, {
           processed: i + 1,
@@ -246,7 +290,13 @@ export async function runBatchAsync(batchId: string, transactionIds: string[], d
           stopped_count: outcomeCounts.stoppedCount,
           pending_count: outcomeCounts.pendingCount,
           failed_count: outcomeCounts.failedCount,
+          blocked_count: outcomeCounts.stoppedCount,
           total_recovered: totalRecovered,
+          recovery_rate: recoveryRate,
+          last_processed_transaction_id: txId,
+          updated_at: new Date().toISOString(),
+          recent_events: [...recentEvents],
+          current_stage: 'saved',
         });
 
         if (delayMs > 0) {
@@ -260,6 +310,8 @@ export async function runBatchAsync(batchId: string, transactionIds: string[], d
       const finalTransactions = await getTransactions();
       const finalOutcomeCounts = calculateOutcomeCounts(finalExecutions, finalTransactions);
       const finalTotalRecovered = calculateRecoveredRevenue(finalLedger);
+      const finalAtRisk = batch.total_at_risk || 0;
+      const finalRecoveryRate = finalAtRisk > 0 ? (finalTotalRecovered / finalAtRisk) * 100 : 0;
 
       await updateBatchRun(batchId, {
         status: 'completed',
@@ -269,7 +321,12 @@ export async function runBatchAsync(batchId: string, transactionIds: string[], d
         stopped_count: finalOutcomeCounts.stoppedCount,
         pending_count: finalOutcomeCounts.pendingCount,
         failed_count: finalOutcomeCounts.failedCount,
+        blocked_count: finalOutcomeCounts.stoppedCount,
         total_recovered: finalTotalRecovered,
+        recovery_rate: finalRecoveryRate,
+        current_stage: 'completed',
+        updated_at: new Date().toISOString(),
+        recent_events: [...recentEvents],
       });
 
       console.log(`[BatchEngine] Batch ${batchId} completed successfully.`);
@@ -278,6 +335,8 @@ export async function runBatchAsync(batchId: string, transactionIds: string[], d
       await updateBatchRun(batchId, {
         status: 'failed',
         error_message: err.message || 'Unexpected batch execution error',
+        current_stage: 'failed',
+        updated_at: new Date().toISOString(),
       });
       await appendAuditLog({
         transaction_id: 'SYSTEM',

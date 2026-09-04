@@ -97,8 +97,24 @@ async function main() {
     process.exit(1);
   }
 
-  // 3. Test Kill-Switch Gating & Pausing
-  console.log('\nTesting Kill-Switch Gating...');
+  // Seed fresh eligible transaction for second batch run
+  const freshTx: Transaction = {
+    id: 'tx_test_104',
+    customer_id: 'cust_test_4',
+    amount: 1500,
+    currency: 'INR',
+    mandate_id: 'mand_test_4',
+    bank_name: 'AXIS',
+    error_code: 'BANK_OFFLINE',
+    error_message: 'Bank offline',
+    failed_at: new Date().toISOString(),
+    customer_payment_history: { past_success_rate: 0.9, avg_balance_pattern: 'normal' },
+    subscription_type: 'Pro Plan',
+  };
+  const currentDb = JSON.parse(fs.readFileSync(testDbPath, 'utf8'));
+  currentDb.transactions.push(freshTx);
+  fs.writeFileSync(testDbPath, JSON.stringify(currentDb, null, 2), 'utf8');
+
   const run2Res = await startBatchRun({ source: 'test_script_2', transactionIds: 'all', delayMs: 0 });
   
   // Pause batch via kill-switch request

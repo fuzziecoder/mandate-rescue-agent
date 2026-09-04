@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { 
   Play, 
   AlertTriangle, 
@@ -53,20 +53,25 @@ interface BatchStatusState {
   progress: number;          // 0–100
   totalCount: number;
   processedCount: number;
-  currentStage: 'idle' | 'classify' | 'decide' | 'guardrails' | 'execute';
+  currentStage: string;
   currentTxIndex: number;
   liveMetrics: LiveMetrics;
   metrics: any;              // overview metrics
+  recentEvents: string[];    // live event feed from batch engine
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const STAGE_LABELS: Record<string, string> = {
   idle: 'Idle',
+  starting: 'Starting',
   classify: 'Classify',
   decide: 'Decide',
   guardrails: 'Guardrails',
-  execute: 'Execute'
+  execute: 'Execute',
+  saved: 'Saved',
+  completed: 'Done',
+  failed: 'Failed',
 };
 
 const STAGE_COLORS: Record<string, string> = {
@@ -74,7 +79,11 @@ const STAGE_COLORS: Record<string, string> = {
   decide: 'text-blue-400',
   guardrails: 'text-amber-400',
   execute: 'text-emerald-400',
-  idle: 'text-slate-400'
+  saved: 'text-cyan-400',
+  starting: 'text-slate-400',
+  completed: 'text-emerald-400',
+  failed: 'text-rose-400',
+  idle: 'text-slate-400',
 };
 
 const formatCurrency = (amt: number) =>
@@ -199,15 +208,17 @@ function PipelineStatusBlock({
   currentStage,
   liveMetrics,
   metrics,
+  recentEvents = [],
   onRun,
   onResume
 }: {
   status: BatchStatusState['status'];
   processedCount: number;
   totalCount: number;
-  currentStage: BatchStatusState['currentStage'];
+  currentStage: string;
   liveMetrics: LiveMetrics;
   metrics: any;
+  recentEvents?: string[];
   onRun: () => void;
   onResume: () => void;
 }) {
@@ -328,6 +339,25 @@ function PipelineStatusBlock({
             <p className="text-lg font-bold text-amber-400 tabular-nums leading-tight">{liveMetrics.nudgesBlocked}</p>
           </div>
         </div>
+
+        {/* Live event feed */}
+        {recentEvents.length > 0 && (
+          <div className="mt-3 rounded-lg border border-slate-800 bg-slate-950/60 p-2.5">
+            <p className="text-[9px] uppercase tracking-widest text-slate-500 font-mono mb-2">Live Events</p>
+            <div className="space-y-1">
+              {recentEvents.slice(0, 5).map((ev, idx) => (
+                <p
+                  key={idx}
+                  className={`text-[10px] font-mono truncate transition-opacity duration-300 ${
+                    idx === 0 ? 'text-cyan-300 opacity-100' : 'text-slate-500 opacity-70'
+                  }`}
+                >
+                  {ev}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -376,6 +406,9 @@ function PipelineStatusBlock({
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [showResetDialog, setShowResetDialog] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [allowReset, setAllowReset] = useState(false);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
 
   const [batchStatus, setBatchStatus] = useState<BatchStatusState>({
@@ -387,13 +420,17 @@ export default function Dashboard() {
     currentStage: 'idle',
     currentTxIndex: 0,
     liveMetrics: { recovered: 0, failed: 0, stopped: 0, pending: 0, nudgesBlocked: 0 },
-    metrics: null
+    metrics: null,
+    recentEvents: [],
   });
 
   // ── Fetch overview metrics ─────────────────────────────────────────────────
   const fetchOverviewMetrics = useCallback(async () => {
     try {
-      const res = await fetch('/api/overview');
+      const res = await fetch(`/api/overview?ts=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' },
+      });
       const data = await res.json();
       if (data && !data.error) {
         const causeRecovery: { [key: string]: any } = {};
@@ -420,6 +457,7 @@ export default function Dashboard() {
           failedCount: metricsObj.failedCount || 0,
           causeRecovery,
           latestBatch: data.latestBatch || null,
+          allowReset: data.allowReset || false,
         };
       }
     } catch {}
@@ -440,6 +478,8 @@ export default function Dashboard() {
     if (!overviewData) return;
 
     const lb = overviewData.latestBatch;
+    setAllowReset(overviewData.allowReset || false);
+    
     let currentStatus: BatchStatusState['status'] = 'idle';
     let processed = 0;
     let total = overviewData.totalTransactions;
@@ -473,61 +513,96 @@ export default function Dashboard() {
     }));
   }, [fetchOverviewMetrics]);
 
-  // ── Poll /api/overview & /api/batch/status ─────────────────────────────────
-  const startPolling = useCallback(() => {
+  // ── Poll /api/batch/{id}/live every 500ms ──────────────────────────────────
+  const startPolling = useCallback((batchId: string) => {
     stopPolling();
     pollRef.current = setInterval(async () => {
       try {
-        const res = await fetch('/api/batch/status');
+        const res = await fetch(`/api/batch/${batchId}/live?ts=${Date.now()}`, {
+          cache: 'no-store',
+        });
+        if (!res.ok) return;
         const data = await res.json();
 
         if (data.status === 'completed') {
           stopPolling();
-          await refreshDashboard();
+          localStorage.removeItem('activeBatchId');
+          // Final refresh to get full overview metrics
+          const overviewData = await fetchOverviewMetrics();
+          setBatchStatus(prev => ({
+            ...prev,
+            id: batchId,
+            status: 'completed',
+            processedCount: data.processedCount,
+            totalCount: data.selectedCount,
+            progress: data.progressPercent,
+            currentStage: 'completed',
+            recentEvents: data.recentEvents || [],
+            liveMetrics: {
+              recovered: data.recoveredCount ?? prev.liveMetrics.recovered,
+              failed: data.failedCount ?? prev.liveMetrics.failed,
+              stopped: data.stoppedCount ?? prev.liveMetrics.stopped,
+              pending: data.pendingCount ?? prev.liveMetrics.pending,
+              nudgesBlocked: data.blockedCount ?? prev.liveMetrics.nudgesBlocked,
+            },
+            metrics: overviewData || prev.metrics,
+          }));
           setShowSummaryModal(true);
         } else if (data.status === 'paused' || data.status === 'failed') {
           stopPolling();
+          localStorage.removeItem('activeBatchId');
           await refreshDashboard();
         } else if (data.status === 'running' || data.status === 'queued') {
           const overviewData = await fetchOverviewMetrics();
           setBatchStatus(prev => ({
             ...prev,
-            id: data.id || prev.id,
+            id: batchId,
             status: data.status,
-            processedCount: data.processed,
-            totalCount: data.total,
+            processedCount: data.processedCount,
+            totalCount: data.selectedCount,
+            progress: data.progressPercent,
             currentStage: data.currentStage || 'execute',
-            currentTxIndex: data.currentTxIndex || data.processed,
+            currentTxIndex: data.processedCount,
+            recentEvents: data.recentEvents || [],
             liveMetrics: {
-              recovered: data.metrics?.recovered || 0,
-              failed: data.metrics?.failed || 0,
-              stopped: data.metrics?.stopped || 0,
-              pending: data.metrics?.pending || 0,
-              nudgesBlocked: data.metrics?.nudgesBlocked || 0,
+              recovered: data.recoveredCount ?? prev.liveMetrics.recovered,
+              failed: data.failedCount ?? prev.liveMetrics.failed,
+              stopped: data.stoppedCount ?? prev.liveMetrics.stopped,
+              pending: data.pendingCount ?? prev.liveMetrics.pending,
+              nudgesBlocked: data.blockedCount ?? prev.liveMetrics.nudgesBlocked,
             },
-            progress: data.total > 0 ? Math.round((data.processed / data.total) * 100) : 0,
             metrics: overviewData || prev.metrics,
           }));
         }
       } catch (err) {
         console.error('Polling error:', err);
       }
-    }, 1000);
+    }, 500);
   }, [fetchOverviewMetrics, refreshDashboard, stopPolling]);
 
   // ── Initial load ────────────────────────────────────────────────────────────
   useEffect(() => {
     const init = async () => {
       try {
-        const statusRes = await fetch('/api/batch/status');
-        const statusData = await statusRes.json();
-
-        if (statusData.status === 'running' || statusData.status === 'queued') {
-          await refreshDashboard();
-          startPolling();
-        } else {
-          await refreshDashboard();
+        // Restore active batch from localStorage first
+        const storedBatchId = localStorage.getItem('activeBatchId');
+        if (storedBatchId) {
+          const liveRes = await fetch(`/api/batch/${storedBatchId}/live?ts=${Date.now()}`, { cache: 'no-store' });
+          if (liveRes.ok) {
+            const liveData = await liveRes.json();
+            if (liveData.status === 'running' || liveData.status === 'queued') {
+              await refreshDashboard();
+              startPolling(storedBatchId);
+              return;
+            } else {
+              localStorage.removeItem('activeBatchId');
+            }
+          } else {
+            localStorage.removeItem('activeBatchId');
+          }
         }
+        // Fallback: check latest batch via overview
+        await refreshDashboard();
       } catch (err) {
         console.error('Init error:', err);
       } finally {
@@ -546,7 +621,8 @@ export default function Dashboard() {
       status: 'running',
       progress: 0,
       processedCount: 0,
-      currentStage: 'idle',
+      currentStage: 'starting',
+      recentEvents: [],
       liveMetrics: { recovered: 0, failed: 0, stopped: 0, pending: prev.totalCount, nudgesBlocked: 0 },
     }));
     setShowSummaryModal(false);
@@ -559,8 +635,9 @@ export default function Dashboard() {
       });
       const data = await res.json();
       if (data.batchId) {
+        localStorage.setItem('activeBatchId', data.batchId);
         setBatchStatus(prev => ({ ...prev, id: data.batchId, status: data.status }));
-        startPolling();
+        startPolling(data.batchId);
       } else {
         console.error('Batch start failed:', data.error);
         await refreshDashboard();
@@ -577,13 +654,90 @@ export default function Dashboard() {
       const res = await fetch(`/api/batch/${batchStatus.id}/resume`, { method: 'POST' });
       const data = await res.json();
       if (data.success) {
+        const resumedId = batchStatus.id;
+        localStorage.setItem('activeBatchId', resumedId);
         setBatchStatus(prev => ({ ...prev, status: 'running' }));
-        startPolling();
+        startPolling(resumedId);
       }
     } catch (e) {
       console.error('Resume error:', e);
     }
   };
+
+  const handleResetDataset = async () => {
+    setIsResetting(true);
+    try {
+      const res = await fetch('/api/dataset/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transactionCount: 300, preserveSettings: true }),
+      });
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to reset dataset');
+      }
+      
+      // Clear client state
+      stopPolling();
+      setBatchStatus(prev => ({
+        ...prev,
+        id: null,
+        status: 'idle',
+        progress: 0,
+        processedCount: 0,
+        currentStage: 'idle',
+        currentTxIndex: 0,
+        liveMetrics: { recovered: 0, failed: 0, stopped: 0, pending: 0, nudgesBlocked: 0 },
+      }));
+      
+      setShowResetDialog(false);
+      await refreshDashboard();
+    } catch (err: any) {
+      console.error(err);
+      alert('Reset failed: ' + err.message);
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  const { status, progress, totalCount, processedCount, currentStage, recentEvents, liveMetrics, metrics } = batchStatus;
+
+  // Chart data grouped by canonical failure cause names
+  const chartData = useMemo(() => {
+    if (!metrics?.causeRecovery) return [];
+    const names: { [key: string]: string } = {
+      insufficient_balance: 'Low Balance',
+      low_balance: 'Low Balance',
+      bank_downtime: 'Bank Offline',
+      bank_offline: 'Bank Offline',
+      bank_server_down: 'Bank Offline',
+      mandate_expired: 'Expired',
+      expired: 'Expired',
+      limit_exceeded: 'Limit Hit',
+      limit_hit: 'Limit Hit',
+      unclassified: 'Ambiguous',
+      unknown: 'Ambiguous',
+    };
+    const grouped: { [displayName: string]: { atRisk: number; recovered: number; count: number } } = {};
+    for (const key of Object.keys(metrics.causeRecovery)) {
+      const item = metrics.causeRecovery[key];
+      const displayName = names[key] || key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      if (!grouped[displayName]) {
+        grouped[displayName] = { atRisk: 0, recovered: 0, count: 0 };
+      }
+      grouped[displayName].atRisk += item.atRisk || 0;
+      grouped[displayName].recovered += item.recovered || 0;
+      grouped[displayName].count += item.totalCount || item.count || 0;
+    }
+    return Object.entries(grouped).map(([name, data]) => ({
+      name,
+      atRisk: data.atRisk,
+      recovered: data.recovered,
+      rate: data.atRisk > 0 ? (data.recovered / data.atRisk) * 100 : 0,
+      count: data.count,
+    }));
+  }, [metrics?.causeRecovery]);
 
   if (loading) {
     return (
@@ -606,27 +760,6 @@ export default function Dashboard() {
     );
   }
 
-  const { status, progress, totalCount, processedCount, currentStage, liveMetrics, metrics } = batchStatus;
-
-  // Chart data
-  const chartData = metrics?.causeRecovery ? Object.keys(metrics.causeRecovery).map(key => {
-    const item = metrics.causeRecovery[key];
-    const names: { [key: string]: string } = {
-      insufficient_balance: 'Low Balance',
-      bank_downtime: 'Bank Offline',
-      mandate_expired: 'Expired',
-      limit_exceeded: 'Limit Hit',
-      unknown: 'Ambiguous'
-    };
-    return {
-      name: names[key] || key,
-      atRisk: item.atRisk,
-      recovered: item.recovered,
-      rate: item.recoveryRate,
-      count: item.totalCount
-    };
-  }) : [];
-
   const buttonLabel = 
     status === 'running' ? `Batch Running — ${processedCount} / ${totalCount}` :
     status === 'paused' ? `Batch Paused — ${processedCount} / ${totalCount}` :
@@ -642,6 +775,33 @@ export default function Dashboard() {
           liveMetrics={liveMetrics}
           onClose={() => setShowSummaryModal(false)}
         />
+      )}
+
+      {/* Reset confirmation dialog */}
+      {showResetDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => !isResetting && setShowResetDialog(false)} />
+          <div className="relative z-10 w-full max-w-lg mx-4 rounded-2xl border border-rose-500/30 bg-[#0a0f1a] shadow-2xl shadow-rose-500/10 p-6 animate-fade-in">
+            <h2 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
+              <ShieldAlert className="text-rose-500" />
+              Reset & Generate Fresh Data
+            </h2>
+            <p className="text-sm text-slate-300 mb-6 leading-relaxed">
+              This will wipe the current database, create a backup, and generate 300 fresh synthetic failure records. Any running batch processes will be safely halted.
+              <br /><br />
+              <strong className="text-rose-400">Warning:</strong> This is a sandbox feature. Are you sure you want to proceed?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button variant="outline" disabled={isResetting} onClick={() => setShowResetDialog(false)}>
+                Cancel
+              </Button>
+              <Button className="bg-rose-600 hover:bg-rose-700 text-white" disabled={isResetting} onClick={handleResetDataset}>
+                {isResetting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                {isResetting ? 'Resetting...' : 'Confirm Reset'}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       <div className="space-y-8 animate-fade-in">
@@ -709,6 +869,16 @@ export default function Dashboard() {
               <RefreshCw className="h-3.5 w-3.5" />
               Refresh
             </button>
+            
+            {allowReset && (
+              <button
+                onClick={() => setShowResetDialog(true)}
+                className="text-xs text-rose-400 border border-rose-500/30 rounded-lg px-3 py-2 hover:bg-rose-500/10 transition-colors flex items-center gap-1.5"
+              >
+                <AlertTriangle className="h-3.5 w-3.5" />
+                Reset Demo Data
+              </button>
+            )}
             {status === 'completed' && (
               <button
                 onClick={() => setShowSummaryModal(true)}
@@ -945,6 +1115,7 @@ export default function Dashboard() {
                 currentStage={currentStage}
                 liveMetrics={liveMetrics}
                 metrics={metrics}
+                recentEvents={recentEvents}
                 onRun={runBatch}
                 onResume={resumeCurrentBatch}
               />

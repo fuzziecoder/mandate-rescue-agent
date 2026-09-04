@@ -20,6 +20,9 @@ import {
   calculateLedgerReconciliation,
 } from '@/lib/metrics';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET() {
   try {
     const [
@@ -117,6 +120,7 @@ export async function GET() {
       byFailureCause,
       recentAuditEvents,
       dataSource: 'synthetic_json',
+      allowReset: process.env.WEBHOOK_SIMULATION_MODE === 'true' && process.env.ALLOW_SYNTHETIC_DATA_RESET === 'true',
       ledgerBalanced: reconciliation.ledgerBalanced,
       duplicateLedgerTransactionIds: reconciliation.duplicateTransactionIds,
       financialDataWarning,
@@ -136,6 +140,11 @@ export async function GET() {
       totalAuditLogs: auditLogs.length,
       totalLedgerEntries: ledgerEntries.length,
       recentActivity: recentAuditEvents,
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+      },
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

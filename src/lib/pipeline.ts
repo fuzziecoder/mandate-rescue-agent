@@ -15,13 +15,13 @@ export interface PipelineTrace {
 export async function processTransactionPipeline(
   tx: FailedTransaction,
   currentDateStr?: string,
-  onStageChange?: (stage: 'classify' | 'decide' | 'guardrails' | 'execute') => void
+  onStageChange?: (stage: 'classify' | 'decide' | 'guardrails' | 'execute', eventText?: string) => void | Promise<void>
 ): Promise<PipelineTrace> {
   const steps: PipelineStep[] = [];
   const start = new Date().toISOString();
 
   // 1. CLASSIFY
-  onStageChange?.('classify');
+  await onStageChange?.('classify', `Classifying cause for ${tx.id}`);
   const classification = classifyFailure(tx);
   steps.push({
     stage: 'classify',
@@ -41,8 +41,8 @@ export async function processTransactionPipeline(
   });
 
   // 2. DECIDE
-  onStageChange?.('decide');
   const decision = decideRecovery(classification.cause, tx);
+  await onStageChange?.('decide', `Decided recovery action: ${decision.action}`);
   steps.push({
     stage: 'decide',
     payload: decision,
@@ -57,8 +57,8 @@ export async function processTransactionPipeline(
   });
 
   // 3. GUARDRAILS
-  onStageChange?.('guardrails');
   const guardrailCheck = await contactAllowed(tx, decision.action, currentDateStr);
+  await onStageChange?.('guardrails', `Guardrail: ${guardrailCheck.allowed ? 'PASSED' : 'BLOCKED - ' + guardrailCheck.reason}`);
   steps.push({
     stage: 'guardrail',
     payload: guardrailCheck,
@@ -73,7 +73,6 @@ export async function processTransactionPipeline(
   });
 
   // 4. EXECUTE (Simulation)
-  onStageChange?.('execute');
   let outcome: Outcome = 'pending';
   let finalAction: RecoveryAction = decision.action;
 
@@ -109,6 +108,8 @@ export async function processTransactionPipeline(
         break;
     }
   }
+
+  await onStageChange?.('execute', `Executed: outcome=${outcome} action=${finalAction}`);
 
   steps.push({
     stage: 'execute',

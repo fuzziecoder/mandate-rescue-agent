@@ -9,7 +9,8 @@
     "lint": "next lint",
     "generate-data": "npx tsx scripts/generate-data.ts",
     "batch": "npx tsx scripts/run-batch.ts",
-    "test-engine": "npx tsx scripts/test-engine.ts"
+    "test-engine": "npx tsx scripts/test-engine.ts",
+    "add-eligible": "npx tsx scripts/add-eligible-cases.ts"
   },
   "dependencies": {
     "@heyputer/puter.js": "^2.6.2",

@@ -14,6 +14,7 @@ import {
   getAuditLogs,
   getLedgerEntries,
 } from './db';
+import { classifyRuleBased } from './classifier';
 
 export interface TransactionView {
   id: string;
@@ -96,7 +97,7 @@ export function normalizeTransactionView(
       recent_nudges_count: tx.customer_payment_history?.recent_nudges_count ?? 0,
       past_retry_attempts: tx.customer_payment_history?.past_retry_attempts ?? 0,
     },
-    failure_cause: cls?.predicted_cause || null,
+    failure_cause: cls?.predicted_cause || classifyRuleBased(tx.error_code || '', tx.error_message || '')?.cause || 'unclassified',
     classifier: cls?.method || null,
     confidence: cls?.confidence ?? null,
     action_chosen: dec?.chosen_action || null,

@@ -1,0 +1,62 @@
+{
+  "transactions": [
+    {
+      "id": "old_1",
+      "amount": 100
+    }
+  ],
+  "classifications": [
+    {
+      "transaction_id": "old_1",
+      "cause": "unknown"
+    }
+  ],
+  "decisions": [
+    {
+      "transaction_id": "old_1",
+      "action": "stop"
+    }
+  ],
+  "guardrail_checks": [
+    {
+      "transaction_id": "old_1",
+      "check": "opt_out"
+    }
+  ],
+  "executions": [
+    {
+      "transaction_id": "old_1",
+      "outcome": "stopped"
+    }
+  ],
+  "audit_log": [
+    {
+      "transaction_id": "old_1",
+      "stage": "test"
+    },
+    {
+      "transaction_id": "SYSTEM",
+      "stage": "system",
+      "event_type": "dataset_reset_requested_active_batch_paused",
+      "detail": "Dataset reset requested while a batch was active. Batch paused and kill-switch activated prior to backup.",
+      "created_at": "2026-09-04T09:47:57.902Z"
+    }
+  ],
+  "promises": [],
+  "ledger": [
+    {
+      "transaction_id": "old_1",
+      "amount": 100
+    }
+  ],
+  "batch_runs": [
+    {
+      "id": "batch_1",
+      "status": "paused"
+    }
+  ],
+  "settings": {
+    "dataset_generation_version": 1,
+    "dispatch_kill_switch": true
+  }
+}

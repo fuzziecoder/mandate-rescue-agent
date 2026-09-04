@@ -128,12 +128,15 @@ export interface LedgerEntry {
 
 export interface GlobalSettings {
   pause_outgoing_contacts: boolean;
+  dataset_generation_version?: number;
 }
 
 export interface SettingsRecord {
   dispatch_kill_switch: boolean;
   updated_at: string | null;
   updated_by: string;
+  dataset_generation_version?: number;
+  dataset_metadata?: any;
 }
 
 export interface BatchRunRecord {
@@ -157,6 +160,12 @@ export interface BatchRunRecord {
   total_at_risk: number;
   total_recovered: number;
   error_message: string | null;
+  blocked_count?: number;
+  recovery_rate?: number;
+  last_processed_transaction_id?: string | null;
+  current_stage?: string;
+  recent_events?: string[];
+  updated_at?: string;
 }
 
 // Database Connection Clients
@@ -196,6 +205,7 @@ function initJsonDb() {
     dispatch_kill_switch: true,
     updated_at: null,
     updated_by: 'system',
+    dataset_generation_version: 1,
   };
 
   if (!fs.existsSync(targetPath)) {
@@ -1093,6 +1103,12 @@ export async function createBatchRun(input: Partial<BatchRunRecord>): Promise<Ba
     total_at_risk: input.total_at_risk || 0,
     total_recovered: input.total_recovered || 0,
     error_message: input.error_message || null,
+    blocked_count: input.blocked_count || 0,
+    recovery_rate: input.recovery_rate || 0,
+    last_processed_transaction_id: input.last_processed_transaction_id || null,
+    current_stage: input.current_stage || 'idle',
+    recent_events: input.recent_events || [],
+    updated_at: input.updated_at || new Date().toISOString(),
   };
   db.batch_runs.push(newRun);
   writeJsonDb(db);
