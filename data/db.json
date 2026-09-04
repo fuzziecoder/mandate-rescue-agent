@@ -6059,6 +6059,26 @@
         "past_retry_attempts": 0
       },
       "subscription_type": "Subscription Autopay"
+    },
+    {
+      "id": "rzp_pay_ngrok_9795",
+      "customer_id": "cust_ngrok_001",
+      "amount": 750,
+      "currency": "INR",
+      "mandate_id": "mand_4969",
+      "bank_name": "ICICI",
+      "error_code": "BAD_REQUEST_ERROR",
+      "error_message": "ngrok E2E test",
+      "failed_at": "2026-09-04T13:27:08.000Z",
+      "customer_payment_history": {
+        "past_success_rate": 0.85,
+        "avg_balance_pattern": "normal",
+        "payment_timing": "on_time",
+        "opt_out": false,
+        "recent_nudges_count": 0,
+        "past_retry_attempts": 0
+      },
+      "subscription_type": "Subscription Autopay"
     }
   ],
   "classifications": [
@@ -8206,6 +8226,13 @@
       "confidence": 0.5,
       "reasoning_text": "Fallback classification: Transaction response contains generic decline parameters.",
       "method": "rule"
+    },
+    {
+      "transaction_id": "rzp_pay_ngrok_9795",
+      "predicted_cause": "unknown",
+      "confidence": 0.5,
+      "reasoning_text": "Fallback classification: Transaction response contains generic decline parameters.",
+      "method": "rule"
     }
   ],
   "decisions": [
@@ -9721,6 +9748,11 @@
     },
     {
       "transaction_id": "rzp_1788508332505",
+      "chosen_action": "retry",
+      "reasoning_text": "Ambiguous error on low-value ticket. Performing low-cost retry retry in 24 hours."
+    },
+    {
+      "transaction_id": "rzp_pay_ngrok_9795",
       "chosen_action": "retry",
       "reasoning_text": "Ambiguous error on low-value ticket. Performing low-cost retry retry in 24 hours."
     }
@@ -13428,6 +13460,13 @@
       "passed": true,
       "detail": "All guardrails passed",
       "id": 529
+    },
+    {
+      "transaction_id": "rzp_pay_ngrok_9795",
+      "check_name": "retry_cap",
+      "passed": true,
+      "detail": "All guardrails passed",
+      "id": 530
     }
   ],
   "executions": [
@@ -15551,6 +15590,13 @@
       "outcome": "pending",
       "amount_recovered": 0,
       "executed_at": "2026-09-04T07:52:12.733Z"
+    },
+    {
+      "transaction_id": "rzp_pay_ngrok_9795",
+      "action_taken": "retry",
+      "outcome": "pending",
+      "amount_recovered": 0,
+      "executed_at": "2026-09-04T07:57:08.912Z"
     }
   ],
   "audit_log": [
@@ -39540,6 +39586,66 @@
       },
       "created_at": "2026-09-04T07:52:12.892Z",
       "timestamp": "2026-09-04T07:52:12.892Z"
+    },
+    {
+      "id": 540,
+      "transaction_id": "rzp_pay_ngrok_9795",
+      "stage": "ingest",
+      "event_type": "razorpay_webhook_ingested",
+      "detail": "Razorpay webhook event payment.failed ingested for transaction rzp_pay_ngrok_9795 (Amount: ₹750).",
+      "payload": {
+        "transaction_id": "rzp_pay_ngrok_9795",
+        "stage": "ingest",
+        "event_type": "razorpay_webhook_ingested",
+        "detail": "Razorpay webhook event payment.failed ingested for transaction rzp_pay_ngrok_9795 (Amount: ₹750)."
+      },
+      "created_at": "2026-09-04T07:57:08.702Z",
+      "timestamp": "2026-09-04T07:57:08.702Z"
+    },
+    {
+      "transaction_id": "rzp_pay_ngrok_9795",
+      "stage": "execute",
+      "payload": {
+        "status": "pending",
+        "steps": [
+          {
+            "stage": "classify",
+            "payload": {
+              "cause": "ambiguous",
+              "confidence": 0.5,
+              "reasoning": "Fallback classification: Transaction response contains generic decline parameters."
+            },
+            "timestamp": "2026-09-04T07:57:08.802Z"
+          },
+          {
+            "stage": "decide",
+            "payload": {
+              "action": "retry",
+              "reasoning": "Ambiguous error on low-value ticket. Performing low-cost retry retry in 24 hours.",
+              "scheduleDelayHours": 24
+            },
+            "timestamp": "2026-09-04T07:57:08.833Z"
+          },
+          {
+            "stage": "guardrail",
+            "payload": {
+              "allowed": true,
+              "reason": "All guardrails passed"
+            },
+            "timestamp": "2026-09-04T07:57:08.881Z"
+          },
+          {
+            "stage": "execute",
+            "payload": {
+              "outcome": "pending",
+              "finalAction": "retry"
+            },
+            "timestamp": "2026-09-04T07:57:08.912Z"
+          }
+        ]
+      },
+      "created_at": "2026-09-04T07:57:08.940Z",
+      "id": 541
     }
   ],
   "promises": [],
@@ -44074,6 +44180,13 @@
       "status": "processed",
       "received_at": "2026-09-04T07:52:12.836Z",
       "transaction_id": "rzp_pay_e2e_310"
+    },
+    {
+      "provider_event_id": "evt_ngrok_e2e_5855",
+      "event_type": "payment.failed",
+      "status": "processed",
+      "received_at": "2026-09-04T07:57:08.637Z",
+      "transaction_id": "rzp_pay_ngrok_9795"
     }
   ],
   "batch_runs": [
