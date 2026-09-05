@@ -33,7 +33,8 @@ import {
   YAxis, 
   Tooltip, 
   ResponsiveContainer, 
-  Cell 
+  Cell,
+  CartesianGrid
 } from 'recharts';
 import Link from 'next/link';
 
@@ -99,9 +100,9 @@ const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
-      <div className="rounded-lg border border-slate-800 bg-[#131B2E] p-3 shadow-md">
-        <p className="text-xs font-semibold text-slate-300 font-display uppercase tracking-wider">{data.name}</p>
-        <div className="mt-2 space-y-1 text-sm font-mono text-slate-100">
+      <div className="rounded-lg border border-slate-800 bg-[#131B2E] p-2.5 shadow-md">
+        <p className="text-[10px] font-semibold text-slate-300 font-display uppercase tracking-wider">{data.name}</p>
+        <div className="mt-1.5 space-y-0.5 text-xs font-mono text-slate-100">
           <p>At Risk: <span className="text-slate-400">₹{data.atRisk.toLocaleString('en-IN')}</span></p>
           <p>Recovered: <span className="text-emerald-400">₹{data.recovered.toLocaleString('en-IN')}</span></p>
           <p>Rate: <span className="text-cyan-400 font-bold">{data.rate.toFixed(1)}%</span></p>
@@ -712,8 +713,16 @@ export default function Dashboard() {
   const { status, progress, totalCount, processedCount, currentStage, recentEvents, liveMetrics, metrics } = batchStatus;
 
   // Chart data grouped by canonical failure cause names
+  // Chart data grouped by canonical failure cause names
   const chartData = useMemo(() => {
-    if (!metrics?.causeRecovery) return [];
+    const defaultCategories: { [displayName: string]: { atRisk: number; recovered: number; count: number } } = {
+      'Low Balance': { atRisk: 0, recovered: 0, count: 0 },
+      'Bank Offline': { atRisk: 0, recovered: 0, count: 0 },
+      'Limit Hit': { atRisk: 0, recovered: 0, count: 0 },
+      'Expired': { atRisk: 0, recovered: 0, count: 0 },
+      'Ambiguous': { atRisk: 0, recovered: 0, count: 0 },
+    };
+
     const names: { [key: string]: string } = {
       insufficient_balance: 'Low Balance',
       low_balance: 'Low Balance',
@@ -721,31 +730,36 @@ export default function Dashboard() {
       bank_offline: 'Bank Offline',
       bank_server_down: 'Bank Offline',
       mandate_expired: 'Expired',
+      expired_mandate: 'Expired',
       expired: 'Expired',
       limit_exceeded: 'Limit Hit',
       limit_hit: 'Limit Hit',
+      wrong_debit_date: 'Ambiguous',
       unclassified: 'Ambiguous',
       unknown: 'Ambiguous',
     };
-    const grouped: { [displayName: string]: { atRisk: number; recovered: number; count: number } } = {};
-    for (const key of Object.keys(metrics.causeRecovery)) {
-      const item = metrics.causeRecovery[key];
-      const displayName = names[key] || key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-      if (!grouped[displayName]) {
-        grouped[displayName] = { atRisk: 0, recovered: 0, count: 0 };
+
+    if (metrics?.causeRecovery) {
+      for (const key of Object.keys(metrics.causeRecovery)) {
+        const item = metrics.causeRecovery[key];
+        const displayName = names[key] || key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        if (!defaultCategories[displayName]) {
+          defaultCategories[displayName] = { atRisk: 0, recovered: 0, count: 0 };
+        }
+        defaultCategories[displayName].atRisk += item.atRisk || 0;
+        defaultCategories[displayName].recovered += item.recovered || 0;
+        defaultCategories[displayName].count += item.totalCount || item.count || 0;
       }
-      grouped[displayName].atRisk += item.atRisk || 0;
-      grouped[displayName].recovered += item.recovered || 0;
-      grouped[displayName].count += item.totalCount || item.count || 0;
     }
-    return Object.entries(grouped).map(([name, data]) => ({
+
+    return Object.entries(defaultCategories).map(([name, data]) => ({
       name,
       atRisk: data.atRisk,
       recovered: data.recovered,
       rate: data.atRisk > 0 ? (data.recovered / data.atRisk) * 100 : 0,
       count: data.count,
     }));
-  }, [metrics?.causeRecovery]);
+  }, [metrics, metrics?.causeRecovery]);
 
   if (loading) {
     return (
@@ -878,10 +892,10 @@ export default function Dashboard() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div>
-            <h1 className="font-display text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+            <h1 className="text-lg sm:text-xl font-semibold tracking-normal text-slate-100 font-sans">
               Auto-Recovery Control Center
             </h1>
-            <p className="mt-1.5 text-slate-400 font-medium max-w-2xl">
+            <p className="mt-0.5 text-xs text-slate-400 font-normal max-w-2xl">
               Monitor active recovery pipelines, compliance guardrails, and money recovered from failed subscription mandates.
             </p>
           </div>
@@ -1030,32 +1044,32 @@ export default function Dashboard() {
         {/* KPI Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="border-zinc-700 bg-black">
-            <CardHeader className="p-4 pb-2">
-              <CardDescription className="text-xs uppercase tracking-wider font-bold font-display text-slate-400">
+            <CardHeader className="p-3.5 pb-1.5">
+              <CardDescription className="text-[10px] uppercase tracking-wider font-bold font-display text-slate-400">
                 Total Volume At Risk
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <div className="text-2xl font-extrabold tracking-tight text-white tabular-nums">
+            <CardContent className="p-3.5 pt-0">
+              <div className="text-xl font-extrabold tracking-tight text-white tabular-nums">
                 {formatCurrency(metrics?.totalAtRisk || 0)}
               </div>
-              <p className="text-[10px] text-slate-400 mt-1 font-mono uppercase tracking-wider">
+              <p className="text-[9px] text-slate-400 mt-0.5 font-mono uppercase tracking-wider">
                 {totalCount} Failed Mandates Loaded
               </p>
             </CardContent>
           </Card>
 
           <Card className="border-emerald-500/20 bg-emerald-500/[0.02]">
-            <CardHeader className="p-4 pb-2">
-              <CardDescription className="text-xs uppercase tracking-wider font-bold font-display text-emerald-400">
+            <CardHeader className="p-3.5 pb-1.5">
+              <CardDescription className="text-[10px] uppercase tracking-wider font-bold font-display text-emerald-400">
                 Recovered Revenue
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <div className="text-2xl font-extrabold tracking-tight text-emerald-400 tabular-nums">
+            <CardContent className="p-3.5 pt-0">
+              <div className="text-xl font-extrabold tracking-tight text-emerald-400 tabular-nums">
                 {formatCurrency(metrics?.totalRecovered || 0)}
               </div>
-              <p className="text-[10px] text-emerald-500/70 mt-1 font-mono uppercase tracking-wider flex items-center">
+              <p className="text-[9px] text-emerald-500/70 mt-0.5 font-mono uppercase tracking-wider flex items-center">
                 <TrendingUp className="h-3 w-3 mr-1" />
                 {status === 'running' ? `${liveMetrics.recovered} so far` : `${metrics?.recoveredCount || 0} Mandates Saved`}
               </p>
@@ -1063,16 +1077,16 @@ export default function Dashboard() {
           </Card>
 
           <Card className="border-cyan-500/20 bg-cyan-500/[0.02]">
-            <CardHeader className="p-4 pb-2">
-              <CardDescription className="text-xs uppercase tracking-wider font-bold font-display text-cyan-400">
+            <CardHeader className="p-3.5 pb-1.5">
+              <CardDescription className="text-[10px] uppercase tracking-wider font-bold font-display text-cyan-400">
                 Overall Recovery Rate
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <div className="text-2xl font-extrabold tracking-tight text-cyan-400 tabular-nums">
+            <CardContent className="p-3.5 pt-0">
+              <div className="text-xl font-extrabold tracking-tight text-cyan-400 tabular-nums">
                 {(metrics?.recoveryRate || 0).toFixed(1)}%
               </div>
-              <div className="w-full bg-slate-800 rounded-full h-1.5 mt-2">
+              <div className="w-full bg-slate-800 rounded-full h-1.5 mt-1.5">
                 <div
                   className="bg-gradient-to-r from-blue-500 to-cyan-400 h-1.5 rounded-full transition-all duration-500"
                   style={{ width: `${metrics?.recoveryRate || 0}%` }}
@@ -1082,17 +1096,17 @@ export default function Dashboard() {
           </Card>
 
           <Card className="border-amber-500/20 bg-amber-500/[0.01]">
-            <CardHeader className="p-4 pb-2 flex-row justify-between items-center space-y-0">
-              <CardDescription className="text-xs uppercase tracking-wider font-bold font-display text-amber-500">
+            <CardHeader className="p-3.5 pb-1.5 flex-row justify-between items-center space-y-0">
+              <CardDescription className="text-[10px] uppercase tracking-wider font-bold font-display text-amber-500">
                 False-Positive Cost
               </CardDescription>
-              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
             </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <div className="text-2xl font-extrabold tracking-tight text-amber-400 tabular-nums">
+            <CardContent className="p-3.5 pt-0">
+              <div className="text-xl font-extrabold tracking-tight text-amber-400 tabular-nums">
                 {status === 'running' ? liveMetrics.nudgesBlocked : (metrics?.stoppedCount || 0)}
               </div>
-              <p className="text-[10px] text-slate-400 mt-1 font-medium">
+              <p className="text-[9px] text-slate-400 mt-0.5 font-medium">
                 {status === 'running' ? 'Nudges blocked by guardrails' : 'Interventions stopped to protect UX'}
               </p>
             </CardContent>
@@ -1102,38 +1116,39 @@ export default function Dashboard() {
         {/* Main content grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Bar Chart */}
-          <Card className="lg:col-span-2 border-zinc-700 bg-black flex flex-col justify-between">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
+          <Card className="lg:col-span-2 border-zinc-700 bg-black flex flex-col">
+            <CardHeader className="p-5 pb-1">
+              <CardTitle className="flex items-center space-x-2 text-base font-bold font-display text-white">
                 <TrendingUp className="h-5 w-5 text-cyan-400" />
                 <span>Recovery Rate by Failure Cause</span>
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs text-slate-400">
                 Breakdown of recovery success rates mapped across distinct transaction failure causes.
               </CardDescription>
             </CardHeader>
-            <CardContent className="pt-0 h-72">
+            <CardContent className="p-5 pt-1 flex-1 min-h-[260px] flex flex-col justify-end">
               {(status === 'idle' && chartData.length === 0) ? (
-                <div className="h-full flex flex-col items-center justify-center text-slate-500 space-y-2 border border-dashed border-slate-800 rounded-lg">
+                <div className="h-full flex flex-col items-center justify-center text-slate-500 space-y-2 border border-dashed border-slate-800 rounded-lg py-8">
                   <Activity className="h-8 w-8 text-slate-700 animate-pulse" />
-                  <span className="text-sm font-medium">
+                  <span className="text-xs font-medium">
                     No recovery data available. Run batch to populate chart.
                   </span>
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <BarChart data={chartData} margin={{ top: 10, right: 15, left: -15, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} opacity={0.5} />
                     <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
                     <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `${val}%`} domain={[0, 100]} />
                     <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(30, 41, 59, 0.3)' }} />
-                    <Bar dataKey="rate" radius={[4, 4, 0, 0]} barSize={40}>
+                    <Bar dataKey="rate" radius={[5, 5, 0, 0]} barSize={44} minPointSize={4}>
                       {chartData.map((entry, index) => {
                         let color = '#0ea5e9';
                         if (entry.name === 'Low Balance') color = '#10b981';
                         if (entry.name === 'Bank Offline') color = '#8b5cf6';
                         if (entry.name === 'Expired') color = '#ef4444';
                         if (entry.name === 'Limit Hit') color = '#f59e0b';
-                        return <Cell key={`cell-${index}`} fill={color} fillOpacity={0.8} />;
+                        return <Cell key={`cell-${index}`} fill={color} fillOpacity={0.85} />;
                       })}
                     </Bar>
                   </BarChart>

@@ -34,10 +34,10 @@ export default function NudgesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center space-x-3">
-            <h1 className="font-display text-3xl font-extrabold text-white tracking-tight">Hinglish Nudge Preview</h1>
+            <h1 className="font-display text-2xl font-bold text-white tracking-tight">Hinglish Nudge Preview</h1>
             <Badge variant="amber" className="font-mono text-xs">Preview Mode Only</Badge>
           </div>
-          <p className="text-slate-400 mt-2">Preview SMS and Web Reauth reminder templates generated from decision records. No messages are sent.</p>
+          <p className="text-xs text-slate-400 mt-1">Preview SMS and Web Reauth reminder templates generated from decision records. No messages are sent.</p>
         </div>
       </div>
 

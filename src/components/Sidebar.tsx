@@ -34,7 +34,7 @@ export function Sidebar() {
             </span>
           </div>
           <div>
-            <span className="font-display text-base font-extrabold tracking-tight text-white group-hover:text-cyan-400 transition-colors">
+            <span className="font-display text-sm font-bold tracking-tight text-white group-hover:text-cyan-400 transition-colors">
               MANDATE RESCUE
             </span>
             <div className="text-[9px] tracking-wider text-zinc-400 font-mono">AUTOPAY RECOVERY ENG</div>
@@ -42,8 +42,8 @@ export function Sidebar() {
         </Link>
 
         {/* Navigation links */}
-        <nav className="flex flex-col space-y-1.5">
-          <span className="text-[10px] uppercase font-bold tracking-widest text-zinc-500 font-mono px-3 mb-2">Navigation</span>
+        <nav className="flex flex-col space-y-1">
+          <span className="text-[9px] uppercase font-bold tracking-widest text-zinc-500 font-mono px-3 mb-1.5">Navigation</span>
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
@@ -51,13 +51,13 @@ export function Sidebar() {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`inline-flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-semibold tracking-wide transition-all ${
+                className={`inline-flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-medium tracking-wide transition-all ${
                   isActive 
                     ? 'bg-zinc-800 text-white border border-zinc-750' 
                     : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50'
                 }`}
               >
-                <Icon className="h-4.5 w-4.5" />
+                <Icon className="h-4 w-4" />
                 <span>{item.name}</span>
               </Link>
             );

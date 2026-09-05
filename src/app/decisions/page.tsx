@@ -32,29 +32,29 @@ export default function DecisionsPage() {
   });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-extrabold text-white tracking-tight">Decision & Escalation Ladder</h1>
-        <p className="text-slate-400 mt-2">Stage 2 recovery decisions, deterministic rules, and reasoning pathways.</p>
+        <h1 className="font-display text-2xl font-bold text-white tracking-tight">Decision & Escalation Ladder</h1>
+        <p className="text-xs text-slate-400 mt-1">Stage 2 recovery decisions, deterministic rules, and reasoning pathways.</p>
       </div>
 
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <Card className="border border-slate-800 bg-slate-950/40 p-4 space-y-1">
+        <Card className="border border-slate-800 bg-slate-950/40 p-3.5 space-y-0.5">
           <p className="text-[10px] text-slate-500 font-mono font-bold uppercase">Total Decisions</p>
-          <p className="text-2xl font-extrabold font-mono text-white tabular-nums">{summary.totalDecisions || 0}</p>
+          <p className="text-xl font-bold font-mono text-white tabular-nums">{summary.totalDecisions || 0}</p>
         </Card>
-        <Card className="border border-slate-800 bg-slate-950/40 p-4 space-y-1">
+        <Card className="border border-slate-800 bg-slate-950/40 p-3.5 space-y-0.5">
           <p className="text-[10px] text-slate-500 font-mono font-bold uppercase">Rule-Based Decisions</p>
-          <p className="text-2xl font-extrabold font-mono text-sky-400 tabular-nums">{summary.ruleBasedCount || 0}</p>
+          <p className="text-xl font-bold font-mono text-sky-400 tabular-nums">{summary.ruleBasedCount || 0}</p>
         </Card>
-        <Card className="border border-slate-800 bg-slate-950/40 p-4 space-y-1">
+        <Card className="border border-slate-800 bg-slate-950/40 p-3.5 space-y-0.5">
           <p className="text-[10px] text-slate-500 font-mono font-bold uppercase">LLM Tiebreak Decisions</p>
-          <p className="text-2xl font-extrabold font-mono text-violet-400 tabular-nums">{summary.llmTiebreakCount || 0}</p>
+          <p className="text-xl font-bold font-mono text-violet-400 tabular-nums">{summary.llmTiebreakCount || 0}</p>
         </Card>
-        <Card className="border border-slate-800 bg-slate-950/40 p-4 space-y-1">
+        <Card className="border border-slate-800 bg-slate-950/40 p-3.5 space-y-0.5">
           <p className="text-[10px] text-slate-500 font-mono font-bold uppercase">Stopped / No Action</p>
-          <p className="text-2xl font-extrabold font-mono text-rose-400 tabular-nums">{summary.noActionOrStoppedCount || 0}</p>
+          <p className="text-xl font-bold font-mono text-rose-400 tabular-nums">{summary.noActionOrStoppedCount || 0}</p>
         </Card>
       </div>
 
@@ -139,10 +139,10 @@ export default function DecisionsPage() {
                               item.action_chosen === 'retry'
                                 ? 'emerald'
                                 : item.action_chosen === 'nudge'
-                                ? 'cyan'
-                                : item.action_chosen === 'reauth'
-                                ? 'purple'
-                                : 'rose'
+                                  ? 'cyan'
+                                  : item.action_chosen === 'reauth'
+                                    ? 'purple'
+                                    : 'rose'
                             }
                             className="font-mono text-[10px] uppercase font-bold"
                           >

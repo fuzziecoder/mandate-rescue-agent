@@ -235,7 +235,7 @@ export default function TransactionTrace({ params }: { params: { id: string } })
               <span className="text-[10px] font-mono tracking-widest text-cyan-400 font-bold uppercase">Transaction Trace</span>
               <Badge className="font-mono text-[10px]">{transaction.id}</Badge>
             </div>
-            <h2 className="font-display text-xl font-extrabold text-white">
+            <h2 className="font-display text-lg font-bold text-white">
               {transaction.subscription_type}
             </h2>
             <p className="text-xs text-slate-400 font-medium">
@@ -244,7 +244,7 @@ export default function TransactionTrace({ params }: { params: { id: string } })
           </div>
 
           <div className="flex flex-col items-start md:items-end">
-            <div className="text-2xl font-extrabold text-white font-mono tabular-nums">
+            <div className="text-xl font-bold text-white font-mono tabular-nums">
               {formatCurrency(transaction.amount)}
             </div>
             <span className="text-[10px] font-mono text-slate-500">

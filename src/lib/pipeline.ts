@@ -32,9 +32,9 @@ export async function processTransactionPipeline(
   await saveClassification({
     transaction_id: tx.id,
     predicted_cause: classification.cause === 'low_balance' ? 'insufficient_balance' :
-                     classification.cause === 'bank_offline' ? 'bank_downtime' :
-                     classification.cause === 'mandate_expired' ? 'mandate_expired' :
-                     classification.cause === 'limit_exceeded' ? 'limit_exceeded' : 'unknown',
+      classification.cause === 'bank_offline' ? 'bank_downtime' :
+        classification.cause === 'mandate_expired' ? 'mandate_expired' :
+          classification.cause === 'limit_exceeded' ? 'limit_exceeded' : 'unknown',
     confidence: classification.confidence,
     reasoning_text: classification.reasoning,
     method: 'rule'
@@ -51,8 +51,8 @@ export async function processTransactionPipeline(
 
   await saveDecision({
     transaction_id: tx.id,
-    chosen_action: decision.action === 'schedule_split' ? 'retry' : 
-                   decision.action === 'voice' ? 'nudge' : decision.action,
+    chosen_action: decision.action === 'schedule_split' ? 'retry' :
+      decision.action === 'voice' ? 'nudge' : decision.action,
     reasoning_text: decision.reasoning
   });
 
@@ -127,9 +127,9 @@ export async function processTransactionPipeline(
 
   // Post to Recovery Ledger if recovered successfully (idempotent write)
   if (outcome === 'recovered') {
-    const channel = finalAction === 'nudge' ? 'sms' : 
-                    finalAction === 'retry' ? 'auto_retry' : 
-                    finalAction === 'reauth' ? 'web_reauth' : 'unknown';
+    const channel = finalAction === 'nudge' ? 'sms' :
+      finalAction === 'retry' ? 'auto_retry' :
+        finalAction === 'reauth' ? 'web_reauth' : 'unknown';
     const ledgerRes = await postRecoveryOnce({
       transactionId: tx.id,
       amount: tx.amount,

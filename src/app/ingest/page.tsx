@@ -48,10 +48,10 @@ export default function IngestPage() {
     <div className="space-y-8">
       <div>
         <div className="flex items-center space-x-3">
-          <h1 className="font-display text-3xl font-extrabold text-white tracking-tight">Detection & Ingest Layer</h1>
+          <h1 className="font-display text-2xl font-bold text-white tracking-tight">Detection & Ingest Layer</h1>
           <Badge variant="cyan" className="font-mono text-xs">Synthetic Data Source</Badge>
         </div>
-        <p className="text-slate-400 mt-2">Onboard failed mandates and inspect incoming transaction metadata.</p>
+        <p className="text-xs text-slate-400 mt-1">Onboard failed mandates and inspect incoming transaction metadata.</p>
       </div>
 
       {/* Terminal instruction callout */}

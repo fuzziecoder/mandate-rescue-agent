@@ -80,11 +80,11 @@ export default function AuditPage() {
   const pagination = data?.pagination || { page: 1, totalPages: 1, total: 0 };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl font-extrabold text-white tracking-tight">System Audit Trail</h1>
-          <p className="text-slate-400 mt-2">Immutable step-by-step pipeline execution traces and compliance logs.</p>
+          <h1 className="font-display text-2xl font-bold text-white tracking-tight">System Audit Trail</h1>
+          <p className="text-xs text-slate-400 mt-1">Immutable step-by-step pipeline execution traces and compliance logs.</p>
         </div>
         <div className="flex items-center space-x-2">
           <Button variant="outline" size="sm" onClick={() => exportData('json')}>
@@ -100,21 +100,21 @@ export default function AuditPage() {
 
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <Card className="bg-slate-950 border border-slate-800 p-4 space-y-1">
+        <Card className="bg-slate-950 border border-slate-800 p-3.5 space-y-0.5">
           <p className="text-[10px] text-slate-500 font-mono font-bold uppercase">Total Audit Traces</p>
-          <p className="text-2xl font-extrabold font-mono text-white tabular-nums">{summary.totalAuditLogs || 0}</p>
+          <p className="text-xl font-bold font-mono text-white tabular-nums">{summary.totalAuditLogs || 0}</p>
         </Card>
-        <Card className="bg-slate-950 border border-slate-800 p-4 space-y-1">
+        <Card className="bg-slate-950 border border-slate-800 p-3.5 space-y-0.5">
           <p className="text-[10px] text-slate-500 font-mono font-bold uppercase">Recovered Audits</p>
-          <p className="text-2xl font-extrabold font-mono text-emerald-400 tabular-nums">{summary.recoveredAudits || 0}</p>
+          <p className="text-xl font-bold font-mono text-emerald-400 tabular-nums">{summary.recoveredAudits || 0}</p>
         </Card>
-        <Card className="bg-slate-950 border border-slate-800 p-4 space-y-1">
+        <Card className="bg-slate-950 border border-slate-800 p-3.5 space-y-0.5">
           <p className="text-[10px] text-slate-500 font-mono font-bold uppercase">Stopped Audits</p>
-          <p className="text-2xl font-extrabold font-mono text-rose-400 tabular-nums">{summary.stoppedAudits || 0}</p>
+          <p className="text-xl font-bold font-mono text-rose-400 tabular-nums">{summary.stoppedAudits || 0}</p>
         </Card>
-        <Card className="bg-slate-950 border border-slate-800 p-4 space-y-1">
+        <Card className="bg-slate-950 border border-slate-800 p-3.5 space-y-0.5">
           <p className="text-[10px] text-slate-500 font-mono font-bold uppercase">Rule vs LLM Classifiers</p>
-          <p className="text-lg font-extrabold font-mono text-cyan-400 tabular-nums">
+          <p className="text-base font-bold font-mono text-cyan-400 tabular-nums">
             {summary.ruleBasedClassifications || 0} Rule / {summary.llmTiebreakClassifications || 0} LLM
           </p>
         </Card>

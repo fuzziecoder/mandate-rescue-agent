@@ -97,8 +97,8 @@ export default function GuardrailsPage() {
 
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="font-display text-3xl font-extrabold text-white tracking-tight">Bounded Executor / Guardrails</h1>
-          <p className="text-slate-400 mt-2">Manage compliance limits and outgoing pipeline controls.</p>
+          <h1 className="font-display text-2xl font-bold text-white tracking-tight">Bounded Executor / Guardrails</h1>
+          <p className="text-xs text-slate-400 mt-1">Manage compliance limits and outgoing pipeline controls.</p>
         </div>
         <Button onClick={fetchGuardrails} disabled={loading} variant="outline" size="sm">
           <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
@@ -136,48 +136,48 @@ export default function GuardrailsPage() {
 
       {/* Grid of metrics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="border border-slate-800 bg-slate-950/40 p-6 space-y-2">
-          <p className="text-xs text-slate-500 font-mono font-bold uppercase">Retry Cap Hits</p>
-          <div className="flex justify-between items-baseline pt-2">
-            <span className="text-3xl font-extrabold font-mono text-white tabular-nums">{summary.retryCapBlocked || 0}</span>
-            <span className="text-xs text-slate-400 font-mono">Limit: 3 / mandate</span>
+        <Card className="border border-slate-800 bg-slate-950/40 p-4 space-y-1">
+          <p className="text-[10px] text-slate-500 font-mono font-bold uppercase">Retry Cap Hits</p>
+          <div className="flex justify-between items-baseline pt-1">
+            <span className="text-xl font-bold font-mono text-white tabular-nums">{summary.retryCapBlocked || 0}</span>
+            <span className="text-[10px] text-slate-400 font-mono">Limit: 3 / mandate</span>
           </div>
           <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
             <div className="bg-sky-500 h-full rounded-full" style={{ width: `${Math.min(100, ((summary.retryCapBlocked || 0) / 10) * 100)}%` }}></div>
           </div>
         </Card>
 
-        <Card className="border border-slate-800 bg-slate-950/40 p-6 space-y-2">
-          <p className="text-xs text-slate-500 font-mono font-bold uppercase">Nudge Cap Hits</p>
-          <div className="flex justify-between items-baseline pt-2">
-            <span className="text-3xl font-extrabold font-mono text-white tabular-nums">{summary.nudgeCapBlocked || 0}</span>
-            <span className="text-xs text-slate-400 font-mono">Limit: 2 / customer / wk</span>
+        <Card className="border border-slate-800 bg-slate-950/40 p-4 space-y-1">
+          <p className="text-[10px] text-slate-500 font-mono font-bold uppercase">Nudge Cap Hits</p>
+          <div className="flex justify-between items-baseline pt-1">
+            <span className="text-xl font-bold font-mono text-white tabular-nums">{summary.nudgeCapBlocked || 0}</span>
+            <span className="text-[10px] text-slate-400 font-mono">Limit: 2 / customer / wk</span>
           </div>
           <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
             <div className="bg-violet-500 h-full rounded-full" style={{ width: `${Math.min(100, ((summary.nudgeCapBlocked || 0) / 10) * 100)}%` }}></div>
           </div>
         </Card>
 
-        <Card className="border border-slate-800 bg-slate-950/40 p-6 space-y-2">
-          <p className="text-xs text-slate-500 font-mono font-bold uppercase">Quiet-Hours Blocks</p>
-          <div className="flex justify-between items-baseline pt-2">
-            <span className="text-3xl font-extrabold font-mono text-amber-500 tabular-nums">{summary.quietHoursBlocked || 0}</span>
-            <span className="text-xs text-slate-400 font-mono">IST 8 PM - 9 AM</span>
+        <Card className="border border-slate-800 bg-slate-950/40 p-4 space-y-1">
+          <p className="text-[10px] text-slate-500 font-mono font-bold uppercase">Quiet-Hours Blocks</p>
+          <div className="flex justify-between items-baseline pt-1">
+            <span className="text-xl font-bold font-mono text-amber-500 tabular-nums">{summary.quietHoursBlocked || 0}</span>
+            <span className="text-[10px] text-slate-400 font-mono">IST 8 PM - 9 AM</span>
           </div>
-          <div className="flex items-center space-x-1 text-xs text-amber-400 mt-2 font-mono">
-            <AlertOctagon className="h-3.5 w-3.5" />
+          <div className="flex items-center space-x-1 text-[10px] text-amber-400 mt-1 font-mono">
+            <AlertOctagon className="h-3 w-3" />
             <span>Honored Quiet Hours</span>
           </div>
         </Card>
 
-        <Card className="border border-slate-800 bg-slate-950/40 p-6 space-y-2">
-          <p className="text-xs text-slate-500 font-mono font-bold uppercase">Opt-outs Honored</p>
-          <div className="flex justify-between items-baseline pt-2">
-            <span className="text-3xl font-extrabold font-mono text-emerald-400 tabular-nums">{summary.optOutBlocked || 0}</span>
-            <span className="text-xs text-slate-400 font-mono">Hard check</span>
+        <Card className="border border-slate-800 bg-slate-950/40 p-4 space-y-1">
+          <p className="text-[10px] text-slate-500 font-mono font-bold uppercase">Opt-outs Honored</p>
+          <div className="flex justify-between items-baseline pt-1">
+            <span className="text-xl font-bold font-mono text-emerald-400 tabular-nums">{summary.optOutBlocked || 0}</span>
+            <span className="text-[10px] text-slate-400 font-mono">Hard check</span>
           </div>
-          <div className="flex items-center space-x-1 text-xs text-emerald-400 mt-2 font-mono">
-            <CheckCircle2 className="h-3.5 w-3.5" />
+          <div className="flex items-center space-x-1 text-[10px] text-emerald-400 mt-1 font-mono">
+            <CheckCircle2 className="h-3 w-3" />
             <span>Opt-out gate clear</span>
           </div>
         </Card>

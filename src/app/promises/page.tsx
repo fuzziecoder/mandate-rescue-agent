@@ -31,17 +31,17 @@ export default function PromisesPage() {
   const promisesList = data?.data || [];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-extrabold text-white tracking-tight">Promise to Pay (P2P) Tracking</h1>
-        <p className="text-slate-400 mt-2">Monitor customer P2P commitments and scheduled repayment tracking.</p>
+        <h1 className="font-display text-2xl font-bold text-white tracking-tight">Promise to Pay (P2P) Tracking</h1>
+        <p className="text-xs text-slate-400 mt-1">Monitor customer P2P commitments and scheduled repayment tracking.</p>
       </div>
 
       {/* Summary KPI grid */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <Card className="bg-zinc-950 border border-zinc-800/80 p-6 space-y-1">
-          <p className="text-xs text-slate-500 font-mono">TOTAL P2P COMMITMENTS</p>
-          <p className="text-3xl font-bold font-mono text-white tabular-nums">{summary.total}</p>
+        <Card className="bg-zinc-950 border border-zinc-800/80 p-4 space-y-1">
+          <p className="text-[10px] text-slate-500 font-mono">TOTAL P2P COMMITMENTS</p>
+          <p className="text-xl font-bold font-mono text-white tabular-nums">{summary.total}</p>
         </Card>
         <Card className="bg-zinc-950 border border-zinc-800/80 p-6 space-y-1">
           <p className="text-xs text-slate-500 font-mono">PENDING DUE</p>

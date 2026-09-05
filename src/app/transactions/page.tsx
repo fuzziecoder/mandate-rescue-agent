@@ -192,10 +192,10 @@ export default function TransactionsList() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+        <h1 className="font-display text-2xl font-bold tracking-tight text-white sm:text-3xl">
           Subscription Failure Register
         </h1>
-        <p className="mt-1.5 text-slate-400 font-medium max-w-2xl">
+        <p className="mt-1 text-xs text-slate-400 max-w-2xl">
           Drill down into individual autopay failures to inspect root-cause analysis, deterministic decisions, and compliance guardrail reports.
         </p>
       </div>

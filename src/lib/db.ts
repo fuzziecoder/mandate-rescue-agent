@@ -23,6 +23,11 @@ export interface Transaction {
     past_retry_attempts?: number;
   };
   subscription_type: string;
+  metadata?: {
+    opted_out?: boolean;
+    nudge_count?: number;
+    [key: string]: any;
+  };
 }
 
 export interface Classification {
@@ -42,10 +47,20 @@ export interface Classification {
 }
 
 export interface Decision {
+  id?: string;
   transaction_id: string;
-  chosen_action: 'retry' | 'nudge' | 'reauth' | 'stop';
+  batch_id?: string;
+  action?: 'nudge' | 'other' | string;
+  chosen_action: 'retry' | 'nudge' | 'reauth' | 'stop' | 'other' | string;
+  reason?: string;
   reasoning_text: string;
+  confidence?: number;
   stop_reason?: string | null;
+  metadata?: {
+    channel?: 'whatsapp' | 'sms' | 'email' | string;
+    [key: string]: any;
+  };
+  created_at?: string;
 }
 
 export interface GuardrailCheck {
@@ -57,14 +72,25 @@ export interface GuardrailCheck {
 }
 
 export interface Execution {
+  id?: string;
   transaction_id: string;
+  batch_id?: string;
+  action?: 'nudge' | string;
   action_taken?: string;
-  outcome: 'recovered' | 'still_failed' | 'pending' | 'stopped';
+  outcome: 'recovered' | 'still_failed' | 'pending' | 'stopped' | 'Recovered' | 'Pending' | 'Failed' | 'Stopped' | string;
   amount_recovered?: number;
   recovered_amount?: number;
   executed_at?: string;
+  created_at?: string;
   timestamp?: string;
   stop_reason?: string | null;
+  details?: {
+    nudge_sent?: boolean;
+    channel?: 'whatsapp' | 'sms' | 'email' | string;
+    message_type?: string;
+    sent_at?: string;
+    [key: string]: any;
+  };
 }
 
 export interface AuditLog {
@@ -186,10 +212,11 @@ if (dbUrl) {
 
 // JSON Fallback DB Path helper
 export function getJsonDbPath(): string {
-  if (process.env.MANDATE_RESCUE_DB_PATH) {
-    return path.isAbsolute(process.env.MANDATE_RESCUE_DB_PATH)
-      ? process.env.MANDATE_RESCUE_DB_PATH
-      : path.join(process.cwd(), process.env.MANDATE_RESCUE_DB_PATH);
+  const customPath = process.env.MANDATE_RESCUE_DB_PATH || process.env.DB_FILE_PATH;
+  if (customPath) {
+    return path.isAbsolute(customPath)
+      ? customPath
+      : path.join(process.cwd(), customPath);
   }
   return path.join(process.cwd(), 'data', 'db.json');
 }
@@ -305,7 +332,7 @@ function writeJsonDb(data: any) {
       fs.renameSync(tempPath, targetPath);
     } catch (_) {
       fs.copyFileSync(tempPath, targetPath);
-      try { fs.unlinkSync(tempPath); } catch (e) {}
+      try { fs.unlinkSync(tempPath); } catch (e) { }
     }
   } catch (_) {
     fs.writeFileSync(targetPath, content, 'utf8');
@@ -474,6 +501,37 @@ export async function getTransaction(id: string): Promise<Transaction | null> {
     const db = readJsonDb();
     const tx = db.transactions.find((t: any) => t.id === id);
     return tx || null;
+  }
+}
+
+export async function incrementTransactionNudgeCount(transactionId: string): Promise<void> {
+  if (pgPool) {
+    await pgPool.query(
+      `UPDATE transactions 
+       SET metadata = jsonb_set(
+         COALESCE(metadata, '{}'::jsonb), 
+         '{nudge_count}', 
+         (COALESCE((metadata->>'nudge_count')::int, 0) + 1)::text::jsonb
+       )
+       WHERE id = $1`,
+      [transactionId]
+    );
+  } else if (supabaseClient) {
+    const { data: tx } = await supabaseClient.from('transactions').select('metadata').eq('id', transactionId).single();
+    const meta = tx?.metadata || {};
+    meta.nudge_count = (meta.nudge_count || 0) + 1;
+    await supabaseClient.from('transactions').update({ metadata: meta }).eq('id', transactionId);
+  } else {
+    const db = readJsonDb();
+    const tx = db.transactions.find((t: any) => t.id === transactionId);
+    if (tx) {
+      if (!tx.metadata) tx.metadata = {};
+      tx.metadata.nudge_count = (tx.metadata.nudge_count || 0) + 1;
+      if (tx.customer_payment_history) {
+        tx.customer_payment_history.recent_nudges_count = (tx.customer_payment_history.recent_nudges_count || 0) + 1;
+      }
+      writeJsonDb(db);
+    }
   }
 }
 
@@ -705,18 +763,22 @@ export async function getBatchMetrics(): Promise<BatchMetrics> {
   let falsePositiveCostAmount = 0;
 
   const causeRecovery: { [key: string]: any } = {
+    low_balance: { atRisk: 0, recovered: 0, totalCount: 0, recoveredCount: 0 },
     insufficient_balance: { atRisk: 0, recovered: 0, totalCount: 0, recoveredCount: 0 },
+    bank_offline: { atRisk: 0, recovered: 0, totalCount: 0, recoveredCount: 0 },
     bank_downtime: { atRisk: 0, recovered: 0, totalCount: 0, recoveredCount: 0 },
+    expired_mandate: { atRisk: 0, recovered: 0, totalCount: 0, recoveredCount: 0 },
     mandate_expired: { atRisk: 0, recovered: 0, totalCount: 0, recoveredCount: 0 },
     limit_exceeded: { atRisk: 0, recovered: 0, totalCount: 0, recoveredCount: 0 },
     unknown: { atRisk: 0, recovered: 0, totalCount: 0, recoveredCount: 0 },
+    unclassified: { atRisk: 0, recovered: 0, totalCount: 0, recoveredCount: 0 },
   };
 
   for (const tx of txs) {
     const trace = await getPipelineTrace(tx.id);
     totalAtRisk += tx.amount;
 
-    const cause = trace?.classification?.predicted_cause || 'unknown';
+    const cause = trace?.classification?.predicted_cause || 'unclassified';
     const outcome = trace?.execution?.outcome || 'pending';
     const action = trace?.decision?.chosen_action;
     const recAmt = trace?.execution?.amount_recovered || 0;
@@ -736,13 +798,14 @@ export async function getBatchMetrics(): Promise<BatchMetrics> {
     }
 
     // Cause breakdown
-    if (causeRecovery[cause]) {
-      causeRecovery[cause].atRisk += tx.amount;
-      causeRecovery[cause].recovered += recAmt;
-      causeRecovery[cause].totalCount++;
-      if (outcome === 'recovered') {
-        causeRecovery[cause].recoveredCount++;
-      }
+    if (!causeRecovery[cause]) {
+      causeRecovery[cause] = { atRisk: 0, recovered: 0, totalCount: 0, recoveredCount: 0 };
+    }
+    causeRecovery[cause].atRisk += tx.amount;
+    causeRecovery[cause].recovered += recAmt;
+    causeRecovery[cause].totalCount++;
+    if (outcome === 'recovered') {
+      causeRecovery[cause].recoveredCount++;
     }
 
     // False-positive nudges check:
@@ -755,7 +818,7 @@ export async function getBatchMetrics(): Promise<BatchMetrics> {
 
   // Calculate recovery rates
   const recoveryRate = totalAtRisk > 0 ? (totalRecovered / totalAtRisk) * 100 : 0;
-  
+
   Object.keys(causeRecovery).forEach(key => {
     const c = causeRecovery[key];
     c.recoveryRate = c.atRisk > 0 ? (c.recovered / c.atRisk) * 100 : 0;

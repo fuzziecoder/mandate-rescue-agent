@@ -33,8 +33,8 @@ export default function LedgerPage() {
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl font-extrabold text-white tracking-tight">The Recovery Ledger</h1>
-          <p className="text-slate-400 mt-2">Immutable financial source of truth for all recovered subscription revenue.</p>
+          <h1 className="font-display text-2xl font-bold text-white tracking-tight">The Recovery Ledger</h1>
+          <p className="text-xs text-slate-400 mt-1">Immutable financial source of truth for all recovered subscription revenue.</p>
         </div>
         <div className="flex items-center space-x-3">
           <Badge

@@ -146,19 +146,26 @@ export function calculateFunnelCounts(
  * Breakdown by failure cause
  */
 export function calculateFailureCauseBreakdown(normalized: any[]): FailureCauseBreakdownItem[] {
-  if (!normalized || normalized.length === 0) return [];
+  const causeMap: { [cause: string]: { count: number; amountAtRisk: number; recoveredAmount: number; recoveredCount: number } } = {
+    low_balance: { count: 0, amountAtRisk: 0, recoveredAmount: 0, recoveredCount: 0 },
+    bank_offline: { count: 0, amountAtRisk: 0, recoveredAmount: 0, recoveredCount: 0 },
+    limit_exceeded: { count: 0, amountAtRisk: 0, recoveredAmount: 0, recoveredCount: 0 },
+    expired_mandate: { count: 0, amountAtRisk: 0, recoveredAmount: 0, recoveredCount: 0 },
+    unclassified: { count: 0, amountAtRisk: 0, recoveredAmount: 0, recoveredCount: 0 },
+  };
 
-  const causeMap: { [cause: string]: { count: number; amountAtRisk: number; recoveredAmount: number; recoveredCount: number } } = {};
-  for (const item of normalized) {
-    const cause = item.failure_cause || item.cause || 'unclassified';
-    if (!causeMap[cause]) {
-      causeMap[cause] = { count: 0, amountAtRisk: 0, recoveredAmount: 0, recoveredCount: 0 };
-    }
-    causeMap[cause].count++;
-    causeMap[cause].amountAtRisk += item.amount || 0;
-    if (item.outcome === 'Recovered' || item.outcome === 'recovered') {
-      causeMap[cause].recoveredCount++;
-      causeMap[cause].recoveredAmount += item.recovered_amount || item.amount || 0;
+  if (normalized && normalized.length > 0) {
+    for (const item of normalized) {
+      const cause = item.failure_cause || item.cause || 'unclassified';
+      if (!causeMap[cause]) {
+        causeMap[cause] = { count: 0, amountAtRisk: 0, recoveredAmount: 0, recoveredCount: 0 };
+      }
+      causeMap[cause].count++;
+      causeMap[cause].amountAtRisk += item.amount || 0;
+      if (item.outcome === 'Recovered' || item.outcome === 'recovered') {
+        causeMap[cause].recoveredCount++;
+        causeMap[cause].recoveredAmount += item.recovered_amount || item.amount || 0;
+      }
     }
   }
 
